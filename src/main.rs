@@ -106,6 +106,41 @@ fn rate_id(rate: Rate) {
     rate as i32;
 }
 
+fn is_sink(ugen: Ugen) -> bool {
+    match ugen {
+        Ugen::Mce(Mce) => {
+            let mut ret = false;
+            for elem in Mce.ugens {
+                if is_sink(*elem) {
+                    ret = true;
+                    break;
+                }
+            }
+            ret
+        },
+        Ugen::Mrg(Mrg) => {
+            if is_sink(*Mrg.left) {
+                true
+            }
+            else {
+                false
+            }
+
+        },
+        Ugen::Primitive(Primitive) => {
+            if Primitive.inputs.len() == 0 {
+                true
+            }
+            else {
+                false
+            }          
+        },
+        _ => {false}
+    }
+
+
+}
+
 //////
 fn main() {
     println!("start");
