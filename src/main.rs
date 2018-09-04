@@ -8,25 +8,26 @@ enum Rate {
     RateDr = 3,
 }
 
-//type UgenList<'a> = &'a[Box<Ugen>];
+
 type UgenList = Vec<Box<Ugen>>;
+
 type RateList = Vec<Rate>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 struct IConst {
     value: i32,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 struct FConst {
     value: f32,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 struct Control {
     name: String,
     index: i32,
     rate: Rate,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 struct Primitive {
     name: String,
     inputs: UgenList,
@@ -35,16 +36,16 @@ struct Primitive {
     index: i32,
     rate: Rate,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 struct Mce {
     ugens: Vec<Box<Ugen>>,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 struct Mrg {
     left: Box<Ugen>,
     right: Box<Ugen>,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 struct Proxy {
     primitive: Primitive,
     index: i32,
@@ -63,7 +64,7 @@ impl Default for Primitive {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 enum Ugen {
     IConst(IConst),
     FConst(FConst),
@@ -206,9 +207,33 @@ fn mce_degree(ugen: &Ugen) -> i32 {
     match ugen {
         Ugen::Mce(mce) => mce.ugens.len() as i32,
         Ugen::Mrg(mrg) => mce_degree(&mrg.left),
-        _ => 0
+        _ => panic!("mce_degree")
     }
+}
 
+fn mce_extend(n: i32, ugen: &Ugen) -> UgenList {
+    match ugen {
+        Ugen::Mce(mce) => extend(&mce.ugens, n),
+        Ugen::Mrg(mrg) => {
+            let ex = mce_extend(n, &*mrg.left);
+            if ex.len() <= 0 {
+                panic!("mce_extend")
+            }
+            let mut out: UgenList = Vec::new();
+            out.push(Box::new(ugen.clone()));
+            out.extend_from_slice(&ex[1 .. n as usize]);
+            out            
+        },
+        _ => {
+            let mut out: UgenList = Vec::new();
+            for ind in 1 .. n {
+                out.push(Box::new(ugen.clone()));
+            }
+            out.push(Box::new(ugen.clone()));
+            out            
+
+        }
+    }
 }
 
 //////
@@ -223,7 +248,7 @@ fn main() {
     ugens1.push(Box::new(ci1.clone()));
     ugens1.push(Box::new(cf1.clone()));
     print_ugens(&ugens1);
-    
+        
     println!("end");
 }
 
@@ -248,6 +273,9 @@ fn test1() {
         ..Primitive::default()
     });
     let mc1 = Ugen::Mce(Mce{ugens: vec![Box::new(p1.clone()), Box::new(p2.clone())]});
+    let mg1 = Ugen::Mrg(Mrg{left: Box::new(mc1.clone()), right: Box::new(p1.clone())});
+	let ex1 = mce_extend(3, &mg1);
+
 
     assert_eq!(o1, o2);
     assert_eq!(exu1.len(), 5);
@@ -255,4 +283,5 @@ fn test1() {
     assert_eq!(is_sink(&p2), true);
     assert_eq!(rate_of(&p2), Rate::RateAr);
     assert_eq!(mce_degree(&mc1), 2);
+    assert_eq!(ex1.len(), 3);
 }
