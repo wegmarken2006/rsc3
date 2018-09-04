@@ -267,7 +267,7 @@ fn iconst(val: i32) -> Box<Ugen> {
 fn main() {
     println!("start");
     let o1 = iota(4, 1, 2);
-    let o2 = vec![1, 3, 5, 7];
+    let o2: Vec<i32> = vec![1, 3, 5, 7];
     //let ci1 = Ugen::IConst{value: 1};
     let ci1 = Ugen::IConst(IConst { value: 1 });
     let cf1 = Ugen::FConst(FConst { value: 3.3 });
@@ -275,6 +275,8 @@ fn main() {
     ugens1.push(Box::new(ci1.clone()));
     ugens1.push(Box::new(cf1.clone()));
     print_ugens(&ugens1);
+    let f1: Vec<i32> = o2.into_iter().filter(|x| *x > 3).collect();
+    for el in f1 {println!(" {}", el)};
         
     println!("end");
 }
