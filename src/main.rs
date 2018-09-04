@@ -243,25 +243,26 @@ fn is_mce(ugen: &Ugen) -> bool {
      }
 }
 
-fn transposer<T>(list: Vec<Vec<T>>) -> Vec<Vec<T>> {
+fn transposer<T>(list: Vec<Vec<T>>) -> Vec<Vec<T>> where T: Clone {
     let len1 = list.len();
     let len2 = (list[0]).len();
-    let mut out : Vec<Vec<T>> = Vec::with_capacity(len2 as usize);
-    for ind in 0.. (len2-1) as usize {
-        out[ind] = Vec::with_capacity(len1 as usize);
-    }
-    for ind2 in 0.. (len2-1) as usize {
-        let mut out1 = out[ind2];
-        for ind1 in 0.. (len1-1) as usize {
-            let in1 = list[ind1];
-            let in2 = in1[ind2];
-            out1[ind1] = in2;
+    let mut out : Vec<Vec<T>> = Vec::new();
+
+    for ind2 in 0.. len2 as usize {
+        let mut out1: Vec<T> = Vec::new();
+        for ind1 in 0.. len1 as usize {
+            let in1 = &list[ind1];
+            let in2 = &in1[ind2];
+            out1.push((*in2).clone());
         }
+        out.push(out1);
     }
     out
-
 }
 
+fn iconst(val: i32) -> Box<Ugen> {
+    Box::new(Ugen::IConst(IConst{value: val}))
+}
 //////
 fn main() {
     println!("start");
@@ -301,6 +302,10 @@ fn test1() {
     let mc1 = Ugen::Mce(Mce{ugens: vec![Box::new(p1.clone()), Box::new(p2.clone())]});
     let mg1 = Ugen::Mrg(Mrg{left: Box::new(mc1.clone()), right: Box::new(p1.clone())});
 	let ex1 = mce_extend(3, &mg1);
+    let ic1 = vec![vec![iconst(1),iconst(2)], 
+                   vec![iconst(3),iconst(4)], 
+                   vec![iconst(5),iconst(6)]];
+    let l2 = transposer(ic1.clone());
 
 
     assert_eq!(o1, o2);
@@ -310,4 +315,5 @@ fn test1() {
     assert_eq!(rate_of(&p2), Rate::RateAr);
     assert_eq!(mce_degree(&mc1), 2);
     assert_eq!(ex1.len(), 3);
+    assert_eq!(l2.len(), 2);
 }
