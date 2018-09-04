@@ -236,6 +236,32 @@ fn mce_extend(n: i32, ugen: &Ugen) -> UgenList {
     }
 }
 
+fn is_mce(ugen: &Ugen) -> bool {
+     match ugen {
+        Ugen::Mce(mce) => true,
+        _ => false
+     }
+}
+
+fn transposer<T>(list: Vec<Vec<T>>) -> Vec<Vec<T>> {
+    let len1 = list.len();
+    let len2 = (list[0]).len();
+    let mut out : Vec<Vec<T>> = Vec::with_capacity(len2 as usize);
+    for ind in 0.. (len2-1) as usize {
+        out[ind] = Vec::with_capacity(len1 as usize);
+    }
+    for ind2 in 0.. (len2-1) as usize {
+        let mut out1 = out[ind2];
+        for ind1 in 0.. (len1-1) as usize {
+            let in1 = list[ind1];
+            let in2 = in1[ind2];
+            out1[ind1] = in2;
+        }
+    }
+    out
+
+}
+
 //////
 fn main() {
     println!("start");
