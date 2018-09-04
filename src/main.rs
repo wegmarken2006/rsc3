@@ -1,4 +1,6 @@
-#[derive(Clone, Copy, Debug)]
+use std::error::Error;
+
+#[derive(Clone, Copy, PartialEq, Debug)]
 enum Rate {
     RateIr = 0,
     RateKr = 1,
@@ -98,7 +100,7 @@ fn print_ugen(ugen: &Ugen) {
     }
 }
 
-fn print_ugens(ugens: UgenList) {
+fn print_ugens(ugens: &UgenList) {
     for ugen in ugens {
         print_ugen(&ugen);
     }
@@ -115,7 +117,7 @@ fn iota(n: i32, init: i32, step: i32) -> Vec<i32> {
     }
 }
 
-fn extend(ugens: UgenList, new_len: i32) -> UgenList {
+fn extend(ugens: &UgenList, new_len: i32) -> UgenList {
     let ln = ugens.len() as i32;
     let mut out: UgenList = Vec::new();
     if ln > new_len {
@@ -123,8 +125,8 @@ fn extend(ugens: UgenList, new_len: i32) -> UgenList {
         out
     } else {
         out.extend(ugens.clone());
-        out.extend(ugens);
-        extend(out.clone(), new_len)
+        out.extend(ugens.clone());
+        extend(&out.clone(), new_len)
     }
 }
 
@@ -132,26 +134,27 @@ fn rate_id(rate: Rate) {
     rate as i32;
 }
 
-fn is_sink(ugen: Ugen) -> bool {
-    match ugen {
-        Ugen::Mce(mce) => {
+fn is_sink(ugen: &Ugen) -> bool {
+    match *ugen {
+        Ugen::Mce(ref mce) => {
             let mut ret = false;
-            for elem in mce.ugens {
-                if is_sink(*elem) {
+            //for elem in mce.ugens {
+            for elem in &mce.ugens {
+                if is_sink(&*elem) {
                     ret = true;
                     break;
                 }
             }
             ret
         },
-        Ugen::Mrg(mrg) => {
-            if is_sink(*mrg.left) {
+        Ugen::Mrg(ref mrg) => {
+            if is_sink(&*mrg.left) {
                 true
             } else {
                 false
             }
         },
-        Ugen::Primitive(primitive) => {
+        Ugen::Primitive(ref primitive) => {
             if primitive.inputs.len() == 0 {
                 true
             } else {
@@ -182,21 +185,30 @@ fn max_rate(rates: RateList, start: Rate ) -> Rate {
     max
 }
 
-fn rate_of(ugen: Ugen) -> Rate {
+fn rate_of(ugen: &Ugen) -> Rate {
     match ugen {
         Ugen::Control(control) => control.rate,
         Ugen::Mce(mce) => {
             let mut rates = Vec::new();
-            for ugen in mce.ugens {
-                rates.push(rate_of(*ugen));
+            for ugen in &mce.ugens {
+                rates.push(rate_of(&*ugen));
             }
             max_rate(rates, Rate::RateKr)
         },        
-        Ugen::Mrg(mrg) => rate_of(*mrg.left),
+        Ugen::Mrg(mrg) => rate_of(&*mrg.left),
         Ugen::Primitive(primitive) => primitive.rate,
         Ugen::Proxy(proxy) => proxy.primitive.rate,
         _ => Rate::RateKr
     }
+}
+
+fn mce_degree(ugen: &Ugen) -> i32 {
+    match ugen {
+        Ugen::Mce(mce) => mce.ugens.len() as i32,
+        Ugen::Mrg(mrg) => mce_degree(&mrg.left),
+        _ => 0
+    }
+
 }
 
 //////
@@ -210,13 +222,7 @@ fn main() {
     let mut ugens1: UgenList = Vec::new();
     ugens1.push(Box::new(ci1.clone()));
     ugens1.push(Box::new(cf1.clone()));
-    /*
-    let p1 = Ugen::Primitive(Primitive {
-        name: "P1".to_string(),
-        ..Primitive::default()
-    });
-    print_ugen(&p1);
-    */
+    print_ugens(&ugens1);
     
     println!("end");
 }
@@ -230,15 +236,23 @@ fn test1() {
     let mut ugens1: UgenList = Vec::new();
     ugens1.push(Box::new(ci1.clone()));
     ugens1.push(Box::new(cf1.clone()));
-    let exu1 = extend(ugens1, 5);
+    let exu1 = extend(&ugens1, 5);
     let nums = vec![13,23,38,11];
     let p1 = Ugen::Primitive(Primitive {
-        name: "P1".to_string(), rate: Rate::RateDr,
+        name: "P1".to_string(), inputs: ugens1.clone(),
+        outputs: vec![Rate::RateKr, Rate::RateIr] ,
         ..Primitive::default()
     });
+    let p2 = Ugen::Primitive(Primitive {
+        name: "P2".to_string(), rate: Rate::RateAr,
+        ..Primitive::default()
+    });
+    let mc1 = Ugen::Mce(Mce{ugens: vec![Box::new(p1.clone()), Box::new(p2.clone())]});
 
     assert_eq!(o1, o2);
     assert_eq!(exu1.len(), 5);
     assert_eq!(max_num(nums, 21), 38);
-    //assert_eq!(rate_of(p1), Rate::RateDr);
+    assert_eq!(is_sink(&p2), true);
+    assert_eq!(rate_of(&p2), Rate::RateAr);
+    assert_eq!(mce_degree(&mc1), 2);
 }
