@@ -260,9 +260,6 @@ fn transposer<T>(list: Vec<Vec<T>>) -> Vec<Vec<T>> where T: Clone {
     out
 }
 
-fn iconst(val: i32) -> Box<Ugen> {
-    Box::new(Ugen::IConst(IConst{value: val}))
-}
 
 fn mce_transform(ugen: &Ugen) -> Ugen {
     match ugen {
@@ -295,6 +292,24 @@ fn mce_transform(ugen: &Ugen) -> Ugen {
         _ => panic!("mce_transform")
     }
 }
+
+//utilities
+fn iconst(val: i32) -> Box<Ugen> {
+    Box::new(Ugen::IConst(IConst{value: val}))
+}
+
+fn mk_ugenlist(vargs: &[&Ugen]) -> UgenList{
+    let mut out: UgenList = Vec::new();
+    for elem in vargs {
+        out.push(Box::new((*elem).clone()));
+    }
+    out
+}
+
+fn mk_mce(ugens: UgenList) -> Ugen {
+    Ugen::Mce(Mce{ugens: ugens})
+}
+
 
 //////
 fn main() {
@@ -334,13 +349,23 @@ fn test1() {
         name: "P2".to_string(), rate: Rate::RateAr,
         ..Primitive::default()
     });
+
     let mc1 = Ugen::Mce(Mce{ugens: vec![Box::new(p1.clone()), Box::new(p2.clone())]});
+    let mc2 = mk_mce(mk_ugenlist(&[&p1, &p2]));
+    let mc3 = mk_mce(mk_ugenlist(&[&p1, &p2, &mc1]));
     let mg1 = Ugen::Mrg(Mrg{left: Box::new(mc1.clone()), right: Box::new(p1.clone())});
 	let ex1 = mce_extend(3, &mg1);
     let ic1 = vec![vec![iconst(1),iconst(2)], 
                    vec![iconst(3),iconst(4)], 
                    vec![iconst(5),iconst(6)]];
     let l2 = transposer(ic1.clone());
+
+    let p3 = Ugen::Primitive(Primitive {
+        name: "P3".to_string(), rate: Rate::RateKr,
+        inputs: mk_ugenlist(&[&mc1, &mc3]), outputs: vec![Rate::RateIr],
+        ..Primitive::default()
+    });
+    let mc10 = mce_transform(&p3);
 
 
     assert_eq!(o1, o2);
