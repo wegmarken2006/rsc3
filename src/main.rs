@@ -263,6 +263,39 @@ fn transposer<T>(list: Vec<Vec<T>>) -> Vec<Vec<T>> where T: Clone {
 fn iconst(val: i32) -> Box<Ugen> {
     Box::new(Ugen::IConst(IConst{value: val}))
 }
+
+fn mce_transform(ugen: &Ugen) -> Ugen {
+    match ugen {
+        Ugen::Primitive(primitive) => {
+            let ins: UgenList = primitive.clone().inputs.into_iter().filter(|x| is_mce(x)).collect();
+            let mut degs: Vec<i32> = Vec::new();
+            for elem in ins {
+                degs.push(mce_degree(&elem));
+            }
+            let upr = max_num(degs, 0);
+            let mut ext: Vec<UgenList> = Vec::new();
+            for elem in primitive.clone().inputs {
+                ext.push(mce_extend(upr, &*elem));
+            }
+            let iet = transposer(ext);
+            let mut out: UgenList = Vec::new();
+            let p = primitive.clone();
+            let name = p.name;
+            let index = p.index;
+            let special = p.special;
+            let rate = p.rate;
+            let outputs = p.outputs;
+            for elem in iet {
+                let new_p = Primitive{inputs: elem.clone(), name: name.clone(),
+                outputs:  outputs.clone(), index: index, special: special, rate: rate};
+                out.push(Box::new(Ugen::Primitive(new_p)));
+            }
+            Ugen::Mce(Mce{ugens: out})
+        },
+        _ => panic!("mce_transform")
+    }
+}
+
 //////
 fn main() {
     println!("start");
