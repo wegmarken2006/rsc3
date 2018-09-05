@@ -315,16 +315,49 @@ fn mk_mce(ugens: UgenList) -> Ugen {
 fn main() {
     println!("start");
     let o1 = iota(4, 1, 2);
-    let o2: Vec<i32> = vec![1, 3, 5, 7];
-    //let ci1 = Ugen::IConst{value: 1};
+    let o2 = vec![1, 3, 5, 7];
     let ci1 = Ugen::IConst(IConst { value: 1 });
     let cf1 = Ugen::FConst(FConst { value: 3.3 });
     let mut ugens1: UgenList = Vec::new();
     ugens1.push(Box::new(ci1.clone()));
     ugens1.push(Box::new(cf1.clone()));
-    print_ugens(&ugens1);
-    let f1: Vec<i32> = o2.into_iter().filter(|x| *x > 3).collect();
-    for el in f1 {println!(" {}", el)};
+    let exu1 = extend(&ugens1, 5);
+    let nums = vec![13,23,38,11];
+    let p1 = Ugen::Primitive(Primitive {
+        name: "P1".to_string(), inputs: ugens1.clone(),
+        outputs: vec![Rate::RateKr, Rate::RateIr] ,
+        ..Primitive::default()
+    });
+    let p2 = Ugen::Primitive(Primitive {
+        name: "P2".to_string(), rate: Rate::RateAr,
+        ..Primitive::default()
+    });
+
+    let mc1 = Ugen::Mce(Mce{ugens: vec![Box::new(p1.clone()), Box::new(p2.clone())]});
+    let mc2 = mk_mce(mk_ugenlist(&[&p1, &p2]));
+    let mc3 = mk_mce(mk_ugenlist(&[&p1, &p2, &mc1]));
+    let mg1 = Ugen::Mrg(Mrg{left: Box::new(mc1.clone()), right: Box::new(p1.clone())});
+	let ex1 = mce_extend(3, &mg1);
+    let ic1 = vec![vec![iconst(1),iconst(2)], 
+                   vec![iconst(3),iconst(4)], 
+                   vec![iconst(5),iconst(6)]];
+    let l2 = transposer(ic1.clone());
+
+    let p3 = Ugen::Primitive(Primitive {
+        name: "P3".to_string(), rate: Rate::RateKr,
+        inputs: mk_ugenlist(&[&mc1, &mc3]), outputs: vec![Rate::RateIr],
+        ..Primitive::default()
+    });
+    let mc10 = mce_transform(&p3);
+    let mc101 = match mc10 {
+        Ugen::Mce(mce) => mce,
+        _ => panic!("mce_transform test")
+    };
+    let pp3 = &mc101.ugens[2];
+    let pp31 = match *(*pp3).clone() {
+        Ugen::Primitive(prim) => prim,
+        _ =>  panic!("mce_transform test 2")
+    };
         
     println!("end");
 }
@@ -366,7 +399,15 @@ fn test1() {
         ..Primitive::default()
     });
     let mc10 = mce_transform(&p3);
-
+    let mc101 = match mc10 {
+        Ugen::Mce(mce) => mce,
+        _ => panic!("mce_transform test")
+    };
+    let pp3 = &mc101.ugens[2];
+    let pp31 = match *(*pp3).clone() {
+        Ugen::Primitive(prim) => prim,
+        _ =>  panic!("mce_transform test 2")
+    };
 
     assert_eq!(o1, o2);
     assert_eq!(exu1.len(), 5);
@@ -376,4 +417,5 @@ fn test1() {
     assert_eq!(mce_degree(&mc1), 2);
     assert_eq!(ex1.len(), 3);
     assert_eq!(l2.len(), 2);
+    assert_eq!(pp31.name, "P3".to_string());
 }
