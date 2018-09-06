@@ -376,6 +376,36 @@ fn mce_channels(ugen: &Ugen) -> UgenList {
     }
 }
 
+fn proxify(ugen: &Ugen) -> Ugen {
+    match ugen {
+        Ugen::Mce(mce) => {
+            let mut lst: UgenList = Vec::new();
+            for elem in &mce.ugens {
+                lst.push(Box::new(proxify(elem)));
+            }
+            Ugen::Mce(Mce{ugens: lst})
+        },
+        Ugen::Mrg(mrg) => {
+            let prx = proxify(&mrg.left);
+            Ugen::Mrg(Mrg{left: Box::new(prx), right: mrg.right.clone()})
+        },
+        Ugen::Primitive(primitive) => {
+            let ln = primitive.inputs.len();
+            if ln < 2 {
+                return ugen.clone()
+            }
+            let lst1 = iota(ln as i32, 0, 1);
+            let mut lst2: UgenList = Vec::new();
+            for index in lst1 {
+                let proxy = Ugen::Proxy(Proxy{index: index, primitive: primitive.clone()});
+                lst2.push(Box::new(proxy));
+            }
+            Ugen::Mce(Mce{ugens: lst2})
+        },
+        _ => panic!("proxify")
+    }
+}
+
 //utilities
 fn iconst(val: i32) -> Box<Ugen> {
     Box::new(Ugen::IConst(IConst { value: val }))
@@ -474,6 +504,21 @@ fn main() {
         Ugen::Primitive(primitive) => primitive,
         _ => panic!("mce_channel test 2"),
     };
+    let prx1 = proxify(&mc2);
+    let l23 = match prx1 {
+        Ugen::Mce(mce) => mce,
+        _ => panic!("proxify test")
+    };
+    let el12 = l23.ugens[0].clone();
+    let el13 = l23.ugens[1].clone();
+    let el12t = match *el12 {
+        Ugen::Mce(mce) => mce,
+        _ => panic!("proxify test 1")
+    };
+    let el13t = match *el13 {
+        Ugen::Primitive(primitive) => primitive,
+        _ => panic!("proxify test 2")
+    };
 
     println!("end");
 }
@@ -549,6 +594,21 @@ fn test1() {
     let el11t = match el11 {
         Ugen::Primitive(primitive) => primitive,
         _ => panic!("mce_channel test 2"),
+    };
+    let prx1 = proxify(&mc2);
+    let l23 = match prx1 {
+        Ugen::Mce(mce) => mce,
+        _ => panic!("proxify test")
+    };
+    let el12 = l23.ugens[0].clone();
+    let el13 = l23.ugens[1].clone();
+    let el12t = match *el12 {
+        Ugen::Mce(mce) => mce,
+        _ => panic!("proxify test 1")
+    };
+    let el13t = match *el13 {
+        Ugen::Primitive(primitive) => primitive,
+        _ => panic!("proxify test 2")
     };
 
     assert_eq!(o1, o2);
