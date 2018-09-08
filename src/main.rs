@@ -1,4 +1,5 @@
-use std::error::Error;
+mod osc;
+use osc::*;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 enum Rate {
@@ -519,6 +520,9 @@ fn main() {
         Ugen::Primitive(primitive) => primitive,
         _ => panic!("proxify test 2")
     };
+
+    let b1 = encode_i16(125);
+    println!("{}", decode_i16(b1));
 
     println!("end");
 }
