@@ -52,6 +52,73 @@ struct Proxy {
     index: i32,
 }
 
+#[derive(Clone, PartialEq, Debug)]
+struct FromPortC {
+	port_NID: i32
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct FromPortK {
+	port_NID: i32
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct FromPortU {
+	port_NID: i32,
+	port_IDX: i32
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct NodeC {
+	id: i32,
+	value: f64
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct NodeK {
+	id: i32,
+	name: String,
+	rate: Rate,
+	def: i32
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct NodeU {
+	id: i32,
+	name: String,
+	rate: Rate,
+	inputs:  UgenList,
+	outputs: RateList,
+	special: i32,
+	ugenID: i32
+}
+
+#[derive(Clone, PartialEq, Debug)]
+enum Node {
+    NodeC(NodeC),
+    NodeK(NodeK),
+    NodeU(NodeU),
+}
+
+struct Graph {
+	nextID: i32,
+	constants: Vec<NodeC>,
+	controls:  Vec<NodeK>,
+	ugens:     Vec<NodeU>
+}
+
+struct Input {
+	u: i32,
+	p: i32
+}
+
+struct MMap  {
+	cs: Vec<i32>,
+	ks: Vec<i32>,
+	us: Vec<i32>
+}
+
+
 impl Default for Primitive {
     fn default() -> Self {
         Primitive {
@@ -74,6 +141,9 @@ enum Ugen {
     Mce(Mce),
     Mrg(Mrg),
     Proxy(Proxy),
+    FromPortC(FromPortC),
+    FromPortK(FromPortK),
+    FromPortU(FromPortU),
 }
 
 static mut G_NEXT_ID: i32 = 0;
@@ -99,6 +169,7 @@ fn print_ugen(ugen: &Ugen) {
             primitive.outputs.len()
         ),
         Ugen::Proxy(proxy) => println!("Px Name:{}", proxy.primitive.name),
+        _ => println!("Other")
     }
 }
 
@@ -407,6 +478,12 @@ fn proxify(ugen: &Ugen) -> Ugen {
     }
 }
 
+fn mk_ugen(rate: Rate, name: String, inputs: UgenList, outputs: RateList, ind: i32, sp: i32) -> Ugen {
+	let spr1 = Primitive{name: name, inputs: inputs, outputs: outputs, special: sp, index: ind, rate: rate};
+    let pr1 = Ugen::Primitive(spr1);
+	proxify(&pr1)
+}
+
 //utilities
 fn iconst(val: i32) -> Box<Ugen> {
     Box::new(Ugen::IConst(IConst { value: val }))
@@ -521,8 +598,6 @@ fn main() {
         _ => panic!("proxify test 2")
     };
 
-    let b1 = encode_i16(125);
-    println!("{}", decode_i16(b1));
 
     println!("end");
 }
@@ -614,6 +689,9 @@ fn test1() {
         Ugen::Primitive(primitive) => primitive,
         _ => panic!("proxify test 2")
     };
+    let b1 = encode_i16(125);
+
+
 
     assert_eq!(o1, o2);
     assert_eq!(exu1.len(), 5);
@@ -624,4 +702,5 @@ fn test1() {
     assert_eq!(ex1.len(), 3);
     assert_eq!(l2.len(), 2);
     assert_eq!(pp31.name, "P3".to_string());
+    assert_eq!(decode_i16(b1), 125);
 }
