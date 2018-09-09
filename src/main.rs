@@ -54,43 +54,43 @@ struct Proxy {
 
 #[derive(Clone, PartialEq, Debug)]
 struct FromPortC {
-	port_NID: i32
+    port_nid: i32,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 struct FromPortK {
-	port_NID: i32
+    port_nid: i32,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 struct FromPortU {
-	port_NID: i32,
-	port_IDX: i32
+    port_nid: i32,
+    port_idx: i32,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 struct NodeC {
-	id: i32,
-	value: f64
+    id: i32,
+    value: f32,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 struct NodeK {
-	id: i32,
-	name: String,
-	rate: Rate,
-	def: i32
+    id: i32,
+    name: String,
+    rate: Rate,
+    def: i32,
 }
 
 #[derive(Clone, PartialEq, Debug)]
 struct NodeU {
-	id: i32,
-	name: String,
-	rate: Rate,
-	inputs:  UgenList,
-	outputs: RateList,
-	special: i32,
-	ugenID: i32
+    id: i32,
+    name: String,
+    rate: Rate,
+    inputs: UgenList,
+    outputs: RateList,
+    special: i32,
+    ugen_id: i32,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -101,23 +101,22 @@ enum Node {
 }
 
 struct Graph {
-	nextID: i32,
-	constants: Vec<NodeC>,
-	controls:  Vec<NodeK>,
-	ugens:     Vec<NodeU>
+    next_id: i32,
+    constants: Vec<NodeC>,
+    controls: Vec<NodeK>,
+    ugens: Vec<NodeU>,
 }
 
 struct Input {
-	u: i32,
-	p: i32
+    u: i32,
+    p: i32,
 }
 
-struct MMap  {
-	cs: Vec<i32>,
-	ks: Vec<i32>,
-	us: Vec<i32>
+struct MMap {
+    cs: Vec<i32>,
+    ks: Vec<i32>,
+    us: Vec<i32>,
 }
-
 
 impl Default for Primitive {
     fn default() -> Self {
@@ -127,6 +126,20 @@ impl Default for Primitive {
             outputs: Vec::new(),
             special: 0,
             index: 0,
+            rate: Rate::RateKr,
+        }
+    }
+}
+
+impl Default for NodeU {
+    fn default() -> Self {
+        NodeU {
+            id: 0,
+            name: "".to_string(),
+            inputs: Vec::new(),
+            outputs: Vec::new(),
+            special: 0,
+            ugen_id: 0,
             rate: Rate::RateKr,
         }
     }
@@ -169,7 +182,7 @@ fn print_ugen(ugen: &Ugen) {
             primitive.outputs.len()
         ),
         Ugen::Proxy(proxy) => println!("Px Name:{}", proxy.primitive.name),
-        _ => println!("Other")
+        _ => println!("Other"),
     }
 }
 
@@ -455,35 +468,67 @@ fn proxify(ugen: &Ugen) -> Ugen {
             for elem in &mce.ugens {
                 lst.push(Box::new(proxify(elem)));
             }
-            Ugen::Mce(Mce{ugens: lst})
-        },
+            Ugen::Mce(Mce { ugens: lst })
+        }
         Ugen::Mrg(mrg) => {
             let prx = proxify(&mrg.left);
-            Ugen::Mrg(Mrg{left: Box::new(prx), right: mrg.right.clone()})
-        },
+            Ugen::Mrg(Mrg {
+                left: Box::new(prx),
+                right: mrg.right.clone(),
+            })
+        }
         Ugen::Primitive(primitive) => {
             let ln = primitive.inputs.len();
             if ln < 2 {
-                return ugen.clone()
+                return ugen.clone();
             }
             let lst1 = iota(ln as i32, 0, 1);
             let mut lst2: UgenList = Vec::new();
             for index in lst1 {
-                let proxy = Ugen::Proxy(Proxy{index: index, primitive: primitive.clone()});
+                let proxy = Ugen::Proxy(Proxy {
+                    index: index,
+                    primitive: primitive.clone(),
+                });
                 lst2.push(Box::new(proxy));
             }
-            Ugen::Mce(Mce{ugens: lst2})
-        },
-        _ => panic!("proxify")
+            Ugen::Mce(Mce { ugens: lst2 })
+        }
+        _ => panic!("proxify"),
     }
 }
 
-fn mk_ugen(rate: Rate, name: String, inputs: UgenList, outputs: RateList, ind: i32, sp: i32) -> Ugen {
-	let spr1 = Primitive{name: name, inputs: inputs, outputs: outputs, special: sp, index: ind, rate: rate};
+fn mk_ugen(
+    rate: Rate,
+    name: String,
+    inputs: UgenList,
+    outputs: RateList,
+    ind: i32,
+    sp: i32,
+) -> Ugen {
+    let spr1 = Primitive {
+        name: name,
+        inputs: inputs,
+        outputs: outputs,
+        special: sp,
+        index: ind,
+        rate: rate,
+    };
     let pr1 = Ugen::Primitive(spr1);
-	proxify(&pr1)
+    proxify(&pr1)
 }
 
+fn mode_c_value(node: &Node) -> f32 {
+    match node {
+        Node::NodeC(nodec) => nodec.value,
+        _ => panic!("node_c_value"),
+    }
+}
+fn node_k_default(node: &Node) -> i32 {
+    match node {
+        Node::NodeK(nodek) => nodek.def,
+        _ => panic!("node_k_default"),
+    }
+}
 //utilities
 fn iconst(val: i32) -> Box<Ugen> {
     Box::new(Ugen::IConst(IConst { value: val }))
@@ -505,6 +550,25 @@ fn get_primitive(ugen: &Ugen) -> Primitive {
     match ugen {
         Ugen::Primitive(primitive) => primitive.clone(),
         _ => panic!("get_primitive"),
+    }
+}
+
+fn get_node_c(node: &Node) -> NodeC {
+    match node {
+        Node::NodeC(nodec) => nodec.clone(),
+        _ => panic!("get_node_c"),
+    }
+}
+fn get_node_k(node: &Node) -> NodeK {
+    match node {
+        Node::NodeK(nodek) => nodek.clone(),
+        _ => panic!("get_node_k"),
+    }
+}
+fn get_node_u(node: &Node) -> NodeU {
+    match node {
+        Node::NodeU(nodeu) => nodeu.clone(),
+        _ => panic!("get_node_u"),
     }
 }
 
@@ -585,19 +649,18 @@ fn main() {
     let prx1 = proxify(&mc2);
     let l23 = match prx1 {
         Ugen::Mce(mce) => mce,
-        _ => panic!("proxify test")
+        _ => panic!("proxify test"),
     };
     let el12 = l23.ugens[0].clone();
     let el13 = l23.ugens[1].clone();
     let el12t = match *el12 {
         Ugen::Mce(mce) => mce,
-        _ => panic!("proxify test 1")
+        _ => panic!("proxify test 1"),
     };
     let el13t = match *el13 {
         Ugen::Primitive(primitive) => primitive,
-        _ => panic!("proxify test 2")
+        _ => panic!("proxify test 2"),
     };
-
 
     println!("end");
 }
@@ -659,7 +722,7 @@ fn test1() {
         Ugen::Primitive(prim) => prim,
         _ => panic!("mce_transform test 2"),
     };
-        let mg3 = Ugen::Mrg(Mrg {
+    let mg3 = Ugen::Mrg(Mrg {
         left: Box::new(mc1.clone()),
         right: Box::new(p2.clone()),
     });
@@ -677,21 +740,58 @@ fn test1() {
     let prx1 = proxify(&mc2);
     let l23 = match prx1 {
         Ugen::Mce(mce) => mce,
-        _ => panic!("proxify test")
+        _ => panic!("proxify test"),
     };
     let el12 = l23.ugens[0].clone();
     let el13 = l23.ugens[1].clone();
     let el12t = match *el12 {
         Ugen::Mce(mce) => mce,
-        _ => panic!("proxify test 1")
+        _ => panic!("proxify test 1"),
     };
     let el13t = match *el13 {
         Ugen::Primitive(primitive) => primitive,
-        _ => panic!("proxify test 2")
+        _ => panic!("proxify test 2"),
     };
     let b1 = encode_i16(125);
-
-
+    let ndk1 = Node::NodeK(NodeK {
+        name: "ndk1".to_string(),
+        def: 5,
+        id: 30,
+        rate: Rate::RateKr,
+    });
+    let ndk2 = Node::NodeK(NodeK {
+        name: "ndk2".to_string(),
+        def: 5,
+        id: 31,
+        rate: Rate::RateKr,
+    });
+    let ndc1 = Node::NodeC(NodeC {
+        id: 20,
+        value: 320 as f32,
+    });
+    let ndc2 = Node::NodeC(NodeC {
+        id: 21,
+        value: 321 as f32,
+    });
+    let ndu1 = Node::NodeU(NodeU {
+        id: 40,
+        name: "ndu1".to_string(),
+        rate: Rate::RateDr,
+        special: 11,
+        ugen_id: 2,
+        ..NodeU::default()
+    });
+    let ndu2 = Node::NodeU(NodeU {
+        id: 41,
+        name: "ndu2".to_string(),
+        ..NodeU::default()
+    });
+    let gr1 = Graph {
+        next_id: 11,
+        constants: vec![get_node_c(&ndc1), get_node_c(&ndc2)],
+        controls: vec![get_node_k(&ndk1), get_node_k(&ndk2)],
+        ugens: vec![get_node_u(&ndu1), get_node_u(&ndu2)],
+    };
 
     assert_eq!(o1, o2);
     assert_eq!(exu1.len(), 5);
