@@ -10,8 +10,8 @@ enum Rate {
 }
 
 type UgenList = Vec<Box<Ugen>>;
-
 type RateList = Vec<Rate>;
+type NodeList = Vec<Node>;
 
 #[derive(Clone, PartialEq, Debug)]
 struct IConst {
@@ -100,6 +100,7 @@ enum Node {
     NodeU(NodeU),
 }
 
+#[derive(Clone, PartialEq, Debug)]
 struct Graph {
     next_id: i32,
     constants: Vec<NodeC>,
@@ -529,7 +530,202 @@ fn node_k_default(node: &Node) -> i32 {
         _ => panic!("node_k_default"),
     }
 }
-//utilities
+
+fn mk_map(gr1: &Graph) -> MMap {
+    let mut cs = Vec::new();
+    let mut ks = Vec::new();
+    let mut us = Vec::new();
+    let gr = gr1.clone();
+    for elem in gr.constants {
+        cs.push(elem.id);
+    }
+    for elem in gr.controls {
+        ks.push(elem.id);
+    }
+    for elem in gr.ugens {
+        us.push(elem.id);
+    }
+    MMap {
+        cs: cs,
+        ks: ks,
+        us: us,
+    }
+}
+
+fn fetch(val: i32, lst: Vec<i32>) -> i32 {
+    for (ind, elem) in lst.into_iter().enumerate() {
+        if elem == val {
+            return ind as i32;
+        }
+    }
+    return -1;
+}
+
+fn as_from_port(node: &Node) -> Ugen {
+    match node {
+        Node::NodeC(nodec) => Ugen::FromPortC(FromPortC { port_nid: nodec.id }),
+        Node::NodeK(nodek) => Ugen::FromPortK(FromPortK { port_nid: nodek.id }),
+        Node::NodeU(nodeu) => Ugen::FromPortU(FromPortU {
+            port_nid: nodeu.id,
+            port_idx: 0,
+        }),
+    }
+}
+
+fn find_c_p(val: f32, nodec: &NodeC) -> bool {
+    val == nodec.value
+}
+
+fn push_c(val: f32, gr: &Graph) -> (Node, Graph) {
+    let node = NodeC {
+        id: gr.next_id + 1,
+        value: val,
+    };
+    let mut consts = vec![node.clone()];
+    consts.extend(gr.constants.clone());
+    let gr1 = Graph {
+        next_id: gr.next_id + 1,
+        constants: consts,
+        controls: gr.controls.clone(),
+        ugens: gr.ugens.clone(),
+    };
+    (Node::NodeC(node), gr1)
+}
+
+fn mk_node_c(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
+    let val: f32 = match ugen {
+        Ugen::IConst(iconst) => iconst.value as f32,
+        Ugen::FConst(fconst) => fconst.value,
+        _ => panic!("mk_node_c")
+    };
+    for nodec in &gr.constants {
+        if find_c_p(val, &nodec) {
+            return (Node::NodeC(nodec.clone()), gr.clone());
+        }
+    }
+    return push_c(val, &gr.clone());
+}
+
+fn find_k_p(name: &String, nodek: &NodeK) -> bool {
+    *name == nodek.name
+}
+
+fn push_k(ctrl: &Control, gr: &Graph) -> (Node, Graph) {
+    let node = NodeK {
+        id: gr.next_id + 1,
+        name: ctrl.name.clone(),
+        def: ctrl.index,
+        rate: ctrl.rate
+    };
+    let mut contrs = vec![node.clone()];
+    contrs.extend(gr.controls.clone());
+    let gr1 = Graph {
+        next_id: gr.next_id + 1,
+        constants: gr.constants.clone(),
+        controls: contrs,
+        ugens: gr.ugens.clone(),
+    };
+    (Node::NodeK(node), gr1)
+}
+
+fn mk_node_k(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
+    let control = match ugen {
+        Ugen::Control(contr) => contr,
+        _ => panic!("mk_node_k")
+    };
+    let name = &control.name;
+    for nodek in &gr.controls {
+        if find_k_p(name, &nodek) {
+            return (Node::NodeK(nodek.clone()), gr.clone());
+        }
+    }
+    return push_k(&control, &gr.clone());
+}
+
+fn find_u_p(rate: Rate, name: &String, id: i32, node: &NodeU) -> bool {
+    if node.rate == rate && node.name == *name && node.id == id {
+        return true;
+    }
+    return false;
+}
+
+fn push_u(primitive: &Primitive, gr: &Graph) -> (Node, Graph) {
+    let node = NodeU{id: gr.next_id + 1,
+    name: primitive.name.clone(),
+    rate: primitive.rate,
+    inputs: primitive.inputs.clone(),
+    outputs: primitive.outputs.clone(),
+    special: primitive.special,
+    ugen_id: primitive.index};
+    let mut ugens = vec![node.clone()];
+    ugens.extend(gr.ugens.clone());
+    let gr1 = Graph {
+        next_id: gr.next_id + 1,
+        constants: gr.constants.clone(),
+        controls: gr.controls.clone(),
+        ugens: ugens,
+    };
+    (Node::NodeU(node), gr1)
+}
+
+fn acc(mut ll: UgenList, mut nn: NodeList, gr: &Graph) -> (NodeList, Graph) {
+    if ll.len() == 0 {
+        nn.clone().reverse();
+        return (nn, gr.clone());
+    }
+    else {
+        let (ng1, ng2) = mk_node (&ll[0], gr);
+        nn.insert(0, ng1);
+        ll.drain(0..1);
+        return acc(ll, nn, &ng2);
+    }
+}
+
+fn mk_node_u(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
+    let primitive = match ugen {
+        Ugen::Primitive(primitive) => primitive,
+        _ => panic!("mk_node_u")
+    };
+    let (ng1, gnew) = acc(primitive.inputs.clone(), Vec::new(), gr);
+    let mut inputs2 = Vec::new();
+    for nd in ng1 {
+        inputs2.push(Box::new(as_from_port(&nd)));
+    }
+    let name = primitive.name.clone(); 
+    let rate = primitive.rate; 
+    let index = primitive.index; 
+    for nd2 in &gnew.ugens {
+        if find_u_p(rate, &name, index, nd2) {
+            return (Node::NodeU(nd2.clone()), gnew.clone());
+        }
+    }
+    let pr = Primitive{
+        name: name,
+        inputs: inputs2,
+        outputs: primitive.outputs.clone(),
+        special: primitive.special,
+        index: index,
+        rate: rate
+    };
+    return push_u(&pr, &gnew);
+}
+
+fn mk_node(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
+    match ugen {
+        Ugen::IConst(iconst) => mk_node_c(ugen, gr),
+        Ugen::FConst(fconst) => mk_node_c(ugen, gr),
+        Ugen::Control(control) => mk_node_k(ugen, gr),
+        Ugen::Primitive(primitive) => mk_node_c(ugen, gr),
+        Ugen::Mrg(mrg) => {
+            let (_, gg) = mk_node(&*mrg.right, gr);
+            mk_node(&*mrg.left, &gg)
+        },
+        _ => panic!("mk_node")
+    }
+}
+
+
+////utilities
 fn iconst(val: i32) -> Box<Ugen> {
     Box::new(Ugen::IConst(IConst { value: val }))
 }
@@ -569,46 +765,6 @@ fn get_node_u(node: &Node) -> NodeU {
     match node {
         Node::NodeU(nodeu) => nodeu.clone(),
         _ => panic!("get_node_u"),
-    }
-}
-
-fn mk_map(gr: Graph) -> MMap {
-    let mut cs = Vec::new();
-    let mut ks = Vec::new();
-    let mut us = Vec::new();
-    for elem in gr.constants {
-        cs.push(elem.id);
-    }
-    for elem in gr.controls {
-        ks.push(elem.id);
-    }
-    for elem in gr.ugens {
-        us.push(elem.id);
-    }
-    MMap{cs: cs, ks: ks, us: us}
-}
-
-fn fetch(val: i32, lst: Vec<i32>) -> i32 {
-    for (ind, elem) in lst.into_iter().enumerate() {
-        if elem == val {
-            return ind as i32;
-        }
-    }
-    return -1;
-}
-
-fn as_from_port(node: &Node) -> Ugen {
-    match node {
-        Node::NodeC(nodec) => Ugen::FromPortC(FromPortC{port_nid: nodec.id}),
-        Node::NodeK(nodek) => Ugen::FromPortK(FromPortK{port_nid: nodek.id}),
-        Node::NodeU(nodeu) => Ugen::FromPortU(FromPortU{port_nid: nodeu.id, port_idx: 0}),
-    }
-}
-
-fn find_cp(val: f32, node: &Node) -> bool {
-    match node {
-        Node::NodeC(nodec) => val == nodec.value,
-        _ => panic!("find_cp")
     }
 }
 
@@ -707,10 +863,10 @@ fn main() {
         controls: vec![get_node_k(&ndk1), get_node_k(&ndk2)],
         ugens: vec![get_node_u(&ndu1), get_node_u(&ndu2)],
     };
-    let mm1 = mk_map(gr1);
-    let lc1 = mm1.cs;
-    let lk1 = mm1.ks;
-    let lu1 = mm1.us;
+    let (nn10, _) = mk_node_c(&iconst(320), &gr1);
+    let nnc10 = get_node_c(&nn10);
+    let ck1 = Ugen::Control(Control{name: "ndk1".to_string(), rate: Rate::RateKr, index: 3});
+    let (nn11, _) = mk_node_k(&ck1, &gr1);
 
 
     println!("end");
@@ -843,10 +999,17 @@ fn test1() {
         controls: vec![get_node_k(&ndk1), get_node_k(&ndk2)],
         ugens: vec![get_node_u(&ndu1), get_node_u(&ndu2)],
     };
-    let mm1 = mk_map(gr1);
+    let mm1 = mk_map(&gr1);
     let lc1 = mm1.cs;
     let lk1 = mm1.ks;
     let lu1 = mm1.us;
+    let (nn10, _) = mk_node_c(&iconst(320), &gr1);
+    let nnc10 = get_node_c(&nn10);
+    let ck1 = Ugen::Control(Control{name: "ndk1".to_string(), rate: Rate::RateKr, index: 3});
+    let (nn11, _) = mk_node_k(&ck1, &gr1);
+    let nnk11 = get_node_k(&nn11);
+
+
 
     assert_eq!(o1, o2);
     assert_eq!(exu1.len(), 5);
@@ -861,5 +1024,7 @@ fn test1() {
     assert_eq!(lc1[0], 20);
     assert_eq!(lk1[1], 31);
     assert_eq!(lu1[0], 40);
-    assert_eq!(find_cp(320 as f32, &ndc1), true);
+    assert_eq!(find_c_p(320 as f32, &get_node_c(&ndc1)), true);
+    assert_eq!(nnc10.id, 20);
+    assert_eq!(nnk11.id, 30);
 }
