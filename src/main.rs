@@ -572,6 +572,22 @@ fn get_node_u(node: &Node) -> NodeU {
     }
 }
 
+fn mk_map(gr: Graph) -> MMap {
+    let mut cs = Vec::new();
+    let mut ks = Vec::new();
+    let mut us = Vec::new();
+    for elem in gr.constants {
+        cs.push(elem.id);
+    }
+    for elem in gr.controls {
+        ks.push(elem.id);
+    }
+    for elem in gr.ugens {
+        us.push(elem.id);
+    }
+    MMap{cs: cs, ks: ks, us: us}
+}
+
 //////
 fn main() {
     println!("start");
@@ -606,13 +622,6 @@ fn main() {
         left: Box::new(mc1.clone()),
         right: Box::new(p1.clone()),
     });
-    let ex1 = mce_extend(3, &mg1);
-    let ic1 = vec![
-        vec![iconst(1), iconst(2)],
-        vec![iconst(3), iconst(4)],
-        vec![iconst(5), iconst(6)],
-    ];
-    let l2 = transposer(ic1.clone());
 
     let p3 = Ugen::Primitive(Primitive {
         name: "P3".to_string(),
@@ -635,32 +644,50 @@ fn main() {
         left: Box::new(mc1.clone()),
         right: Box::new(p2.clone()),
     });
-    let l22 = mce_channels(&mg3);
-    let el10 = &(*l22[0]);
-    let el11 = &(*l22[1]);
-    let el10t = match el10 {
-        Ugen::Mrg(mrg) => mrg,
-        _ => panic!("mce_channel test"),
+    let ndk1 = Node::NodeK(NodeK {
+        name: "ndk1".to_string(),
+        def: 5,
+        id: 30,
+        rate: Rate::RateKr,
+    });
+    let ndk2 = Node::NodeK(NodeK {
+        name: "ndk2".to_string(),
+        def: 5,
+        id: 31,
+        rate: Rate::RateKr,
+    });
+    let ndc1 = Node::NodeC(NodeC {
+        id: 20,
+        value: 320 as f32,
+    });
+    let ndc2 = Node::NodeC(NodeC {
+        id: 21,
+        value: 321 as f32,
+    });
+    let ndu1 = Node::NodeU(NodeU {
+        id: 40,
+        name: "ndu1".to_string(),
+        rate: Rate::RateDr,
+        special: 11,
+        ugen_id: 2,
+        ..NodeU::default()
+    });
+    let ndu2 = Node::NodeU(NodeU {
+        id: 41,
+        name: "ndu2".to_string(),
+        ..NodeU::default()
+    });
+    let gr1 = Graph {
+        next_id: 11,
+        constants: vec![get_node_c(&ndc1), get_node_c(&ndc2)],
+        controls: vec![get_node_k(&ndk1), get_node_k(&ndk2)],
+        ugens: vec![get_node_u(&ndu1), get_node_u(&ndu2)],
     };
-    let el11t = match el11 {
-        Ugen::Primitive(primitive) => primitive,
-        _ => panic!("mce_channel test 2"),
-    };
-    let prx1 = proxify(&mc2);
-    let l23 = match prx1 {
-        Ugen::Mce(mce) => mce,
-        _ => panic!("proxify test"),
-    };
-    let el12 = l23.ugens[0].clone();
-    let el13 = l23.ugens[1].clone();
-    let el12t = match *el12 {
-        Ugen::Mce(mce) => mce,
-        _ => panic!("proxify test 1"),
-    };
-    let el13t = match *el13 {
-        Ugen::Primitive(primitive) => primitive,
-        _ => panic!("proxify test 2"),
-    };
+    let mm1 = mk_map(gr1);
+    let lc1 = mm1.cs;
+    let lk1 = mm1.ks;
+    let lu1 = mm1.us;
+
 
     println!("end");
 }
@@ -792,6 +819,10 @@ fn test1() {
         controls: vec![get_node_k(&ndk1), get_node_k(&ndk2)],
         ugens: vec![get_node_u(&ndu1), get_node_u(&ndu2)],
     };
+    let mm1 = mk_map(gr1);
+    let lc1 = mm1.cs;
+    let lk1 = mm1.ks;
+    let lu1 = mm1.us;
 
     assert_eq!(o1, o2);
     assert_eq!(exu1.len(), 5);
@@ -803,4 +834,7 @@ fn test1() {
     assert_eq!(l2.len(), 2);
     assert_eq!(pp31.name, "P3".to_string());
     assert_eq!(decode_i16(b1), 125);
+    assert_eq!(lc1[0], 20);
+    assert_eq!(lk1[1], 31);
+    assert_eq!(lu1[0], 40);
 }
