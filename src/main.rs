@@ -588,6 +588,30 @@ fn mk_map(gr: Graph) -> MMap {
     MMap{cs: cs, ks: ks, us: us}
 }
 
+fn fetch(val: i32, lst: Vec<i32>) -> i32 {
+    for (ind, elem) in lst.into_iter().enumerate() {
+        if elem == val {
+            return ind as i32;
+        }
+    }
+    return -1;
+}
+
+fn as_from_port(node: &Node) -> Ugen {
+    match node {
+        Node::NodeC(nodec) => Ugen::FromPortC(FromPortC{port_nid: nodec.id}),
+        Node::NodeK(nodek) => Ugen::FromPortK(FromPortK{port_nid: nodek.id}),
+        Node::NodeU(nodeu) => Ugen::FromPortU(FromPortU{port_nid: nodeu.id, port_idx: 0}),
+    }
+}
+
+fn find_cp(val: f32, node: &Node) -> bool {
+    match node {
+        Node::NodeC(nodec) => val == nodec.value,
+        _ => panic!("find_cp")
+    }
+}
+
 //////
 fn main() {
     println!("start");
@@ -837,4 +861,5 @@ fn test1() {
     assert_eq!(lc1[0], 20);
     assert_eq!(lk1[1], 31);
     assert_eq!(lu1[0], 40);
+    assert_eq!(find_cp(320 as f32, &ndc1), true);
 }
