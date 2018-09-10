@@ -596,7 +596,7 @@ fn mk_node_c(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
     let val: f32 = match ugen {
         Ugen::IConst(iconst) => iconst.value as f32,
         Ugen::FConst(fconst) => fconst.value,
-        _ => panic!("mk_node_c")
+        _ => panic!("mk_node_c"),
     };
     for nodec in &gr.constants {
         if find_c_p(val, &nodec) {
@@ -615,7 +615,7 @@ fn push_k(ctrl: &Control, gr: &Graph) -> (Node, Graph) {
         id: gr.next_id + 1,
         name: ctrl.name.clone(),
         def: ctrl.index,
-        rate: ctrl.rate
+        rate: ctrl.rate,
     };
     let mut contrs = vec![node.clone()];
     contrs.extend(gr.controls.clone());
@@ -631,7 +631,7 @@ fn push_k(ctrl: &Control, gr: &Graph) -> (Node, Graph) {
 fn mk_node_k(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
     let control = match ugen {
         Ugen::Control(contr) => contr,
-        _ => panic!("mk_node_k")
+        _ => panic!("mk_node_k"),
     };
     let name = &control.name;
     for nodek in &gr.controls {
@@ -650,13 +650,15 @@ fn find_u_p(rate: Rate, name: &String, id: i32, node: &NodeU) -> bool {
 }
 
 fn push_u(primitive: &Primitive, gr: &Graph) -> (Node, Graph) {
-    let node = NodeU{id: gr.next_id + 1,
-    name: primitive.name.clone(),
-    rate: primitive.rate,
-    inputs: primitive.inputs.clone(),
-    outputs: primitive.outputs.clone(),
-    special: primitive.special,
-    ugen_id: primitive.index};
+    let node = NodeU {
+        id: gr.next_id + 1,
+        name: primitive.name.clone(),
+        rate: primitive.rate,
+        inputs: primitive.inputs.clone(),
+        outputs: primitive.outputs.clone(),
+        special: primitive.special,
+        ugen_id: primitive.index,
+    };
     let mut ugens = vec![node.clone()];
     ugens.extend(gr.ugens.clone());
     let gr1 = Graph {
@@ -672,9 +674,8 @@ fn acc(mut ll: UgenList, mut nn: NodeList, gr: &Graph) -> (NodeList, Graph) {
     if ll.len() == 0 {
         nn.clone().reverse();
         return (nn, gr.clone());
-    }
-    else {
-        let (ng1, ng2) = mk_node (&ll[0], gr);
+    } else {
+        let (ng1, ng2) = mk_node(&ll[0], gr);
         nn.insert(0, ng1);
         ll.drain(0..1);
         return acc(ll, nn, &ng2);
@@ -684,28 +685,28 @@ fn acc(mut ll: UgenList, mut nn: NodeList, gr: &Graph) -> (NodeList, Graph) {
 fn mk_node_u(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
     let primitive = match ugen {
         Ugen::Primitive(primitive) => primitive,
-        _ => panic!("mk_node_u")
+        _ => panic!("mk_node_u"),
     };
     let (ng1, gnew) = acc(primitive.inputs.clone(), Vec::new(), gr);
     let mut inputs2 = Vec::new();
     for nd in ng1 {
         inputs2.push(Box::new(as_from_port(&nd)));
     }
-    let name = primitive.name.clone(); 
-    let rate = primitive.rate; 
-    let index = primitive.index; 
+    let name = primitive.name.clone();
+    let rate = primitive.rate;
+    let index = primitive.index;
     for nd2 in &gnew.ugens {
         if find_u_p(rate, &name, index, nd2) {
             return (Node::NodeU(nd2.clone()), gnew.clone());
         }
     }
-    let pr = Primitive{
+    let pr = Primitive {
         name: name,
         inputs: inputs2,
         outputs: primitive.outputs.clone(),
         special: primitive.special,
         index: index,
-        rate: rate
+        rate: rate,
     };
     return push_u(&pr, &gnew);
 }
@@ -719,11 +720,84 @@ fn mk_node(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
         Ugen::Mrg(mrg) => {
             let (_, gg) = mk_node(&*mrg.right, gr);
             mk_node(&*mrg.left, &gg)
-        },
-        _ => panic!("mk_node")
+        }
+        _ => panic!("mk_node"),
     }
 }
 
+fn implicit(num: i32) -> NodeU {
+    let mut rates = Vec::new();
+    for ind in 1..(num + 1) {
+        rates.push(Rate::RateKr);
+    }
+    let node = NodeU {
+        id: -1,
+        name: "Control".to_string(),
+        rate: Rate::RateKr,
+        inputs: Vec::new(),
+        outputs: rates,
+        special: 0,
+        ugen_id: 0,
+    };
+    node
+}
+
+fn mrg_n(lst: &UgenList) -> Ugen {
+    if lst.len() == 1 {
+        return *lst[0].clone();
+    } else if lst.len() == 2 {
+        return Ugen::Mrg(Mrg {
+            left: lst[0].clone(),
+            right: lst[1].clone(),
+        });
+    }
+    let mut newlst = Vec::new();
+    newlst.extend(lst.clone());
+    return Ugen::Mrg(Mrg {
+        left: lst[0].clone(),
+        right: Box::new(mrg_n(&newlst)),
+    });
+}
+
+fn prepare_root(ugen: &Ugen) -> Ugen {
+    match ugen {
+        Ugen::Mce(mce) => mrg_n(&mce.ugens),
+        Ugen::Mrg(mrg) => {
+            let m1 = Mrg {
+                left: Box::new(prepare_root(&*mrg.left)),
+                right: Box::new(prepare_root(&*mrg.right)),
+            };
+            Ugen::Mrg(m1)
+        }
+        _ => ugen.clone(),
+    }
+}
+
+fn empty_graph() -> Graph {
+    Graph{
+        next_id: 0,
+        constants: Vec::new(),
+        controls: Vec::new(),
+        ugens: Vec::new(),        
+    }
+}
+
+fn synth(ugen: &Ugen) -> Graph {
+	let root = prepare_root(ugen);
+	let (_, gr) = mk_node(&root, &empty_graph());
+	let cs = gr.constants.clone();
+	let ks = gr.controls.clone();
+	let us = gr.ugens.clone();
+	//reverse us
+	let mut us1 = Vec::new();
+    us1.extend(us);
+	if ks.len() != 0 {
+		let node = implicit(ks.len() as i32);
+        us1.insert(0, node);
+	}
+	let grout = Graph{next_id: -1, constants: cs, controls: ks, ugens: us1};
+	grout
+}
 
 ////utilities
 fn iconst(val: i32) -> Box<Ugen> {
@@ -865,9 +939,12 @@ fn main() {
     };
     let (nn10, _) = mk_node_c(&iconst(320), &gr1);
     let nnc10 = get_node_c(&nn10);
-    let ck1 = Ugen::Control(Control{name: "ndk1".to_string(), rate: Rate::RateKr, index: 3});
+    let ck1 = Ugen::Control(Control {
+        name: "ndk1".to_string(),
+        rate: Rate::RateKr,
+        index: 3,
+    });
     let (nn11, _) = mk_node_k(&ck1, &gr1);
-
 
     println!("end");
 }
@@ -1005,11 +1082,13 @@ fn test1() {
     let lu1 = mm1.us;
     let (nn10, _) = mk_node_c(&iconst(320), &gr1);
     let nnc10 = get_node_c(&nn10);
-    let ck1 = Ugen::Control(Control{name: "ndk1".to_string(), rate: Rate::RateKr, index: 3});
+    let ck1 = Ugen::Control(Control {
+        name: "ndk1".to_string(),
+        rate: Rate::RateKr,
+        index: 3,
+    });
     let (nn11, _) = mk_node_k(&ck1, &gr1);
     let nnk11 = get_node_k(&nn11);
-
-
 
     assert_eq!(o1, o2);
     assert_eq!(exu1.len(), 5);
