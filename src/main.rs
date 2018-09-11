@@ -518,17 +518,11 @@ fn mk_ugen(
     proxify(&pr1)
 }
 
-fn mode_c_value(node: &Node) -> f32 {
-    match node {
-        Node::NodeC(nodec) => nodec.value,
-        _ => panic!("node_c_value"),
-    }
+fn node_c_value(nodec: &NodeC) -> f32 {
+    nodec.value
 }
-fn node_k_default(node: &Node) -> i32 {
-    match node {
-        Node::NodeK(nodek) => nodek.def,
-        _ => panic!("node_k_default"),
-    }
+fn node_k_default(nodek: &NodeK) -> i32 {
+    nodek.def
 }
 
 fn mk_map(gr1: &Graph) -> MMap {
@@ -835,6 +829,23 @@ fn encode_node_u(mp: &MMap, node: &NodeU) -> Vec<u8> {
     for elem in node.outputs.clone() {
         out.extend(encode_i8(elem as i32));
     }
+    out
+}
+
+fn encode_graphdef(name: &String, graph: &Graph) -> Vec<u8> {
+    let mm = mk_map(graph);
+    let mut out = Vec::new();
+    out.extend(encode_str(&"SCgf".to_string()));
+    out.extend(encode_i32(0));
+    out.extend(encode_i16(1));
+    out.extend(str_pstr(name));
+    out.extend(encode_i16(graph.constants.len() as i32));
+    let mut ll = Vec::new();
+    for  elem in graph.constants.clone() {
+        ll.push(node_c_value(&elem));
+    }
+
+
     out
 }
 ////utilities
