@@ -799,6 +799,44 @@ fn synth(ugen: &Ugen) -> Graph {
 	grout
 }
 
+fn encode_node_k(mp: MMap, node: &NodeK) -> Vec<u8> {
+    let mut out = str_pstr(&node.name);
+    let id1 = fetch(node.id, mp.ks);
+    out.extend(encode_i16(id1));
+    out
+}
+
+fn encode_input(inp: Input) -> Vec<u8> {
+    let mut out = encode_i16(inp.u);
+    out.extend(encode_i16(inp.p));
+    out
+}
+
+fn mk_input(mp: &MMap, fp: &Ugen) -> Input {
+    match fp {
+        Ugen::FromPortC(fc) => Input{u: -1, p: fetch(fc.port_nid, mp.cs.clone())},
+        Ugen::FromPortK(fk) => Input{u: 0, p: fetch(fk.port_nid, mp.ks.clone())},
+        Ugen::FromPortU(fu) => Input{u: fetch(fu.port_nid, mp.us.clone()), p: fu.port_nid},
+        _ => panic!("mk_input")
+    }
+}
+
+fn encode_node_u(mp: &MMap, node: &NodeU) -> Vec<u8> {
+    let len1 = node.inputs.len();
+    let len2 = node.outputs.len();
+    let mut out = str_pstr(&node.name);
+    out.extend(encode_i8(node.rate as i32));
+    out.extend(encode_i16(len1 as i32));
+    out.extend(encode_i16(len2 as i32));
+    out.extend(encode_i16(node.special));
+    for elem in node.inputs.clone() {
+        out.extend(encode_input(mk_input(mp, &*elem)));
+    }
+    for elem in node.outputs.clone() {
+        out.extend(encode_i8(elem as i32));
+    }
+    out
+}
 ////utilities
 fn iconst(val: i32) -> Box<Ugen> {
     Box::new(Ugen::IConst(IConst { value: val }))

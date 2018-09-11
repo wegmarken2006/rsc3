@@ -40,13 +40,13 @@ pub fn decode_i32(buf: Vec<u8>) -> i32 {
     num as i32
 }
 
-pub fn encode_str(str1: String) -> Vec<u8> {
-    let bb = str1.into_bytes();
+pub fn encode_str(str1: &String) -> Vec<u8> {
+    let bb = str1.clone().into_bytes();
     bb
 }
 
-pub fn str_pstr(str1: String) -> Vec<u8> {
-    let mut bb = str1.into_bytes();
+pub fn str_pstr(str1: &String) -> Vec<u8> {
+    let mut bb = str1.clone().into_bytes();
     let len = bb.len();
     bb.insert(0, len as u8);
     bb
