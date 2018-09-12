@@ -10,7 +10,7 @@ struct Oscillator {
 }
 
 impl Oscillator {
-    fn new(name: String, freq: f32, phase: f32) -> Oscillator {
+    fn new(name: &str, freq: f32, phase: f32) -> Oscillator {
         let mut osc = Oscillator {
             name: name.to_string(),
             freq: freq,
@@ -41,16 +41,11 @@ fn const_vec(nums: Vec<f32>) -> UgenList {
 }
 
 pub fn sin_osc(freq: f32, phase: f32) -> Ugen {
-    let osc = Oscillator::new("SinOsc".to_string(), freq, phase);
+    let osc = Oscillator::new("SinOsc", freq, phase);
     osc.run(1)
 }
 
-/*
-sin_osc <- function(rate, a, b) {
-  ccr_mk_oscillator(rate, "SinOsc", list(a, b), 1L)
-}
 
-*/
 #[test]
 fn test2() {
     assert_eq!(true, true);

@@ -51,3 +51,29 @@ pub fn str_pstr(str1: &String) -> Vec<u8> {
     bb.insert(0, len as u8);
     bb
 }
+
+fn align(n: i32) -> i32 {
+    4 - n % 4
+}
+
+fn extend_(pad : u8, bts: Vec<u8>) -> Vec<u8> {
+    let n = align(bts.len() as i32);
+    let mut out = Vec::new();
+    out.extend(bts);
+    for ind in 0..n {
+        out.push(pad);
+    }
+    out
+}
+
+fn encode_string(str1: &String) -> Vec<u8> {
+    extend_(0 as u8, encode_str(str1))
+}
+
+fn encode_blob(bts: Vec<u8>) -> Vec<u8> {
+    let b1 = encode_i32(bts.len() as i32);
+    let mut out = Vec::new();
+    out.extend(b1);
+    out.extend(extend_(0 as u8, bts)) ;
+    out
+}

@@ -82,6 +82,13 @@ struct NodeK {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+struct NodeP {
+    id: i32,
+    node: Box<Node>,
+    p_idx: i32,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 struct NodeU {
     id: i32,
     name: String,
@@ -97,6 +104,7 @@ enum Node {
     NodeC(NodeC),
     NodeK(NodeK),
     NodeU(NodeU),
+    NodeP(NodeP),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -553,6 +561,15 @@ fn fetch(val: i32, lst: Vec<i32>) -> i32 {
     }
     return -1;
 }
+fn node_id(node: &Node) -> i32 {
+    match node {
+        Node::NodeC(nodec) => nodec.id,
+        Node::NodeK(nodek) => nodek.id,
+        Node::NodeU(nodeu) => nodeu.id,
+        Node::NodeP(nodep) => nodep.id,
+    }
+
+}
 
 fn as_from_port(node: &Node) -> Ugen {
     match node {
@@ -561,6 +578,10 @@ fn as_from_port(node: &Node) -> Ugen {
         Node::NodeU(nodeu) => Ugen::FromPortU(FromPortU {
             port_nid: nodeu.id,
             port_idx: 0,
+        }),
+        Node::NodeP(nodep) => Ugen::FromPortU(FromPortU{
+            port_nid: node_id(&*nodep.node),
+            port_idx: nodep.p_idx,
         }),
     }
 }
@@ -704,6 +725,17 @@ fn mk_node_u(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
     return push_u(&pr, &gnew);
 }
 
+fn mk_node_p(node: &Node, p_idx: i32, gr: &Graph) -> (Node, Graph) {
+    let nodep = NodeP{id:gr.next_id + 1, node: Box::new(node.clone()), p_idx: p_idx};
+    let gr1 = Graph {
+        next_id: gr.next_id + 1,
+        constants: gr.constants.clone(),
+        controls: gr.controls.clone(),
+        ugens: gr.ugens.clone(),
+    };
+    (Node::NodeP(nodep), gr1)
+}
+
 fn mk_node(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
     match ugen {
         Ugen::IConst(iconst) => mk_node_c(ugen, gr),
@@ -713,6 +745,10 @@ fn mk_node(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
         Ugen::Mrg(mrg) => {
             let (_, gg) = mk_node(&*mrg.right, gr);
             mk_node(&*mrg.left, &gg)
+        }
+        Ugen::Proxy(proxy) => {
+            let (nn, gr1) = mk_node_u(&Ugen::Primitive(proxy.clone().primitive), gr);
+            mk_node_p(&nn, proxy.index, &gr1)
         }
         _ => panic!("mk_node"),
     }
@@ -822,6 +858,7 @@ fn encode_node_u(mp: &MMap, node: &NodeU) -> Vec<u8> {
     out.extend(encode_i16(len1 as i32));
     out.extend(encode_i16(len2 as i32));
     out.extend(encode_i16(node.special));
+    print_bytes("encode node u 1", out.clone()); //DEBUG
     for elem in node.inputs.clone() {
         out.extend(encode_input(mk_input(mp, &*elem)));
     }
@@ -864,18 +901,20 @@ fn encode_graphdef(name: &String, graph: &Graph) -> Vec<u8> {
         a9.extend(encode_node_k(&mm, &elem));
     }
     out.extend(a9);
+    print_bytes("A9", out.clone()); //DEBUG
     out.extend(encode_i16(graph.ugens.len() as i32));
     let mut a10 = Vec::new();
     for  elem in graph.ugens.clone() {
         a10.extend(encode_node_u(&mm, &elem));
     }
     out.extend(a10);
+    print_bytes("A10", out.clone()); //DEBUG
     out
 }
 
-pub fn synthdef(name: String, ugen: &Ugen) -> Vec<u8> {
+pub fn synthdef(name: &str, ugen: &Ugen) -> Vec<u8> {
     let graph = synth(ugen);
-    encode_graphdef(&name, &graph)
+    encode_graphdef(&name.to_string(), &graph)
 }
 
 pub fn mk_osc_me(rate: Rate, name: &String, inputs: UgenList, ugen: &Ugen, ou: i32) -> Ugen {
@@ -950,6 +989,13 @@ fn get_node_u(node: &Node) -> NodeU {
         Node::NodeU(nodeu) => nodeu.clone(),
         _ => panic!("get_node_u"),
     }
+}
+pub fn print_bytes(name: &str, lst: Vec<u8>) {
+    println!("{}", name);
+    for elem in lst {
+        print!(" {:x}", elem);
+    }
+    println!("");
 }
 
 #[test]
