@@ -990,10 +990,11 @@ fn get_node_u(node: &Node) -> NodeU {
 pub fn print_bytes(name: &str, lst: &Vec<u8>) {
     println!("{}", name);
     for elem in lst {
-        print!(" {:x}", elem);
+        print!(" {:?}", *elem as char);
     }
     println!("");
 }
+
 
 #[test]
 fn test1() {

@@ -12,6 +12,7 @@ fn main() {
     let ug1 = synthdef("anonymous", &sin_osc(440.0, 0.0));
     print_bytes("final", &ug1);
 
+    sc_start();
     println!("\nend");
 
 }
