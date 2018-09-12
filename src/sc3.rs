@@ -858,7 +858,6 @@ fn encode_node_u(mp: &MMap, node: &NodeU) -> Vec<u8> {
     out.extend(encode_i16(len1 as i32));
     out.extend(encode_i16(len2 as i32));
     out.extend(encode_i16(node.special));
-    print_bytes("encode node u 1", out.clone()); //DEBUG
     for elem in node.inputs.clone() {
         out.extend(encode_input(mk_input(mp, &*elem)));
     }
@@ -901,14 +900,12 @@ fn encode_graphdef(name: &String, graph: &Graph) -> Vec<u8> {
         a9.extend(encode_node_k(&mm, &elem));
     }
     out.extend(a9);
-    print_bytes("A9", out.clone()); //DEBUG
     out.extend(encode_i16(graph.ugens.len() as i32));
     let mut a10 = Vec::new();
     for  elem in graph.ugens.clone() {
         a10.extend(encode_node_u(&mm, &elem));
     }
     out.extend(a10);
-    print_bytes("A10", out.clone()); //DEBUG
     out
 }
 
@@ -990,7 +987,7 @@ fn get_node_u(node: &Node) -> NodeU {
         _ => panic!("get_node_u"),
     }
 }
-pub fn print_bytes(name: &str, lst: Vec<u8>) {
+pub fn print_bytes(name: &str, lst: &Vec<u8>) {
     println!("{}", name);
     for elem in lst {
         print!(" {:x}", elem);
