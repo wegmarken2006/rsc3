@@ -207,7 +207,7 @@ fn osc_receive() {
         //RECEIVE
         //let mut buf: [u8; 1] = [0; 1];
         let mut buf: [u8; 512] = mem::uninitialized();
-        println!("Reading data");
+        println!("Reading data ....");
         let result = socket.recv_from(&mut buf);
         //drop(socket);
         let mut data;
@@ -215,7 +215,7 @@ fn osc_receive() {
             Ok((amt, src)) => {
                 //println!("Received data from {}", src);
                 data = Vec::from(&buf[0..amt]);
-                print_bytes("Received data", &data);
+                print_bytes("Received data:", &data);
             }
             Err(err) => panic!("Read error: {}", err),
         }
