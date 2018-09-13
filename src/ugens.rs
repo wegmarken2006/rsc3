@@ -1,6 +1,8 @@
 use sc3::*;
 
-struct Oscillator {
+
+
+pub struct Oscillator {
     name: String,
     freq: f32,
     phase: f32,
@@ -10,7 +12,7 @@ struct Oscillator {
 }
 
 impl Oscillator {
-    fn new(name: &str, freq: f32, phase: f32) -> Oscillator {
+    pub fn new(name: &str, freq: f32, phase: f32) -> Oscillator {
         let mut osc = Oscillator {
             name: name.to_string(),
             freq: freq,
@@ -21,11 +23,11 @@ impl Oscillator {
         };
         osc
     }
-    fn rate(mut self, rate: Rate) -> Oscillator {
+    pub fn rate(mut self, rate: Rate) -> Oscillator {
         self.rate = rate;
         self
     }
-    fn run(mut self, ou: i32) -> Ugen {
+    pub fn run(mut self, ou: i32) -> Ugen {
         let inputs = const_vec(vec![self.freq, self.phase]);
         let osc = mk_oscillator(self.rate, &self.name, inputs, ou);
         osc
@@ -43,6 +45,26 @@ fn const_vec(nums: Vec<f32>) -> UgenList {
 pub fn sin_osc(freq: f32, phase: f32) -> Ugen {
     let osc = Oscillator::new("SinOsc", freq, phase);
     osc.run(1)
+}
+
+
+macro_rules! osc_m {
+    ($name: expr, $first: expr, $second: expr) => {
+        let osc = Oscillator::new($name, $first, $second).osc.run(1) 
+    };
+    ($name: expr, $first: expr, $second: expr, rate: $third: expr) => {
+        Oscillator::new($name, $first, $second).rate($third).run(1)
+    };
+}
+
+
+macro_rules! sin_osc_m {
+    ($first: expr, $second: expr) => {
+        osc_m!("SinOsc", $first, $second) 
+    };
+    ($first: expr, $second: expr, rate: $third: expr) => {
+        osc_m!("SinOsc", $first, $second, rate: $third)
+    };
 }
 
 
