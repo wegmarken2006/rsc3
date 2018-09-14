@@ -167,6 +167,19 @@ pub enum Ugen {
     FromPortU(FromPortU),
 }
 
+impl From<i32> for Ugen {
+    fn from(i: i32) -> Ugen {
+        Ugen::IConst(IConst{value: i})
+    }
+}
+
+impl From<f32> for Ugen {
+    fn from(f: f32) -> Ugen {
+        Ugen::FConst(FConst{value: f})
+    }
+}
+
+
 static mut G_NEXT_ID: i32 = 0;
 
 fn next_uid() -> i32 {
@@ -959,6 +972,16 @@ pub fn mk_oscillator(rate: Rate, name: &String, inputs: UgenList, ou: i32) -> Ug
     }
 
     mk_ugen(rate, name, inputs, rl, 0, 0)
+}
+
+pub mk_filter(name: &String, inputs: UgenList, ou: i32, sp: i32) -> Ugen {
+    let rates = inputs.into_iter().map(|x| rate_of(x)).collect();
+    let maxrate = max_rate(rates, Rate::RateKr);
+    let ou_list = Vec::new();
+    for _ in 0..ou {
+        ou_list.push(maxrate);
+    }
+    mk_ugen(maxrate, name, inputs, ou_list, 0, sp)
 }
 
 ////utilities
