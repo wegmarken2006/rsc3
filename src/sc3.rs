@@ -155,6 +155,8 @@ impl Default for NodeU {
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Ugen {
+    IntNum(i32),
+    FloatNum(f32),
     IConst(IConst),
     FConst(FConst),
     Control(Control),
@@ -169,16 +171,31 @@ pub enum Ugen {
 
 impl From<i32> for Ugen {
     fn from(i: i32) -> Ugen {
-        Ugen::IConst(IConst{value: i})
+        Ugen::IntNum(i)
     }
 }
 
 impl From<f32> for Ugen {
     fn from(f: f32) -> Ugen {
-        Ugen::FConst(FConst{value: f})
+        Ugen::FloatNum(f)
     }
 }
 
+trait UgenTrait {
+    fn is_ugen(self) -> bool;
+}
+
+impl UgenTrait for Ugen {
+    fn is_ugen(self) -> bool {return true;}
+}
+
+impl UgenTrait for i32 {
+    fn is_ugen(self) -> bool {return true;}
+}
+
+impl UgenTrait for f32 {
+    fn is_ugen(self) -> bool {return true;}
+}
 
 static mut G_NEXT_ID: i32 = 0;
 
@@ -944,7 +961,7 @@ pub fn synthdef(name: &str, ugen: &Ugen) -> Vec<u8> {
     encode_graphdef(&name.to_string(), &graph)
 }
 
-pub fn mk_osc_me(rate: Rate, name: &String, inputs: UgenList, ugen: &Ugen, ou: i32) -> Ugen {
+pub fn mk_osc_me(rate: Rate, name: &str, inputs: UgenList, ugen: &Ugen, ou: i32) -> Ugen {
     let mut rl = Vec::new();
     for ind in 0..ou {
         rl.push(rate);
@@ -953,36 +970,80 @@ pub fn mk_osc_me(rate: Rate, name: &String, inputs: UgenList, ugen: &Ugen, ou: i
     inps.extend(inputs);
     let channels = mce_channels(ugen);
     inps.extend(channels);
-    mk_ugen(rate, name, inps, rl, 0, 0)
+    mk_ugen(rate, &name.to_string(), inps, rl, 0, 0)
 }
 
-pub fn mk_osc_id(rate: Rate, name: &String, inputs: UgenList, ou: i32) -> Ugen {
+pub fn mk_osc_id(rate: Rate, name: &str, inputs: UgenList, ou: i32) -> Ugen {
     let mut rl = Vec::new();
     for ind in 0..ou {
         rl.push(rate);
     }
 
-    mk_ugen(rate, name, inputs, rl, next_uid(), 0)
+    mk_ugen(rate, &name.to_string(), inputs, rl, next_uid(), 0)
 }
 
-pub fn mk_oscillator(rate: Rate, name: &String, inputs: UgenList, ou: i32) -> Ugen {
+pub fn mk_oscillator(rate: Rate, name: &str, inputs: UgenList, ou: i32) -> Ugen {
     let mut rl = Vec::new();
     for ind in 0..ou {
         rl.push(rate);
     }
 
-    mk_ugen(rate, name, inputs, rl, 0, 0)
+    mk_ugen(rate, &name.to_string(), inputs, rl, 0, 0)
 }
 
-pub mk_filter(name: &String, inputs: UgenList, ou: i32, sp: i32) -> Ugen {
-    let rates = inputs.into_iter().map(|x| rate_of(x)).collect();
+pub fn mk_filter(name: &str, inputs: UgenList, ou: i32, sp: i32) -> Ugen {
+    let rates = inputs.clone().into_iter().map(|x| rate_of(&x)).collect();
     let maxrate = max_rate(rates, Rate::RateKr);
-    let ou_list = Vec::new();
+    let mut ou_list = Vec::new();
     for _ in 0..ou {
         ou_list.push(maxrate);
     }
-    mk_ugen(maxrate, name, inputs, ou_list, 0, sp)
+    mk_ugen(maxrate, &name.to_string(), inputs, ou_list, 0, sp)
 }
+
+pub fn mk_filter_id(name: &str, inputs: UgenList, ou: i32, sp: i32) -> Ugen {
+    let rates = inputs.clone().into_iter().map(|x| rate_of(&x)).collect();
+    let maxrate = max_rate(rates, Rate::RateKr);
+    let mut ou_list = Vec::new();
+    for _ in 0..ou {
+        ou_list.push(maxrate);
+    }
+    mk_ugen(maxrate, &name.to_string(), inputs, ou_list, next_uid(), sp)
+}
+
+pub fn mk_filter_mce(name: &str, inputs: UgenList, ugen: &Ugen, ou: i32) -> Ugen {
+    let mut inps = Vec::new();
+    inps.extend(inputs.clone());
+    mk_filter(name, inps, ou, 0)
+}
+
+fn mk_operator(name: &str, inputs: UgenList, sp: i32) -> Ugen {
+    let rates = inputs.clone().into_iter().map(|x| rate_of(&x)).collect();
+    let maxrate = max_rate(rates, Rate::RateKr);
+    let outs = vec![maxrate];
+    mk_ugen(maxrate, &name.to_string(), inputs, outs, 0, sp)
+}
+
+use std::any::TypeId;
+fn mk_unary_operator<T>(sp: i32, fun: fn(f32) -> f32, op: T) -> Ugen where T: UgenTrait{ 
+    let op_u = Ugen::from(op);
+    match op_u {
+        Ugen::IntNum(num) => {
+            let mut ops = Vec::new();
+            ops.push(Box::new(Ugen::IConst(IConst{value: num})));
+            mk_operator("UnaryOpUgen", ops, sp)
+        },
+        Ugen::FloatNum(num) => {
+            let mut ops = Vec::new();
+            ops.push(Box::new(Ugen::FConst(FConst{value: num})));
+            mk_operator("UnaryOpUgen", ops, sp)
+        },
+        Ugen::IConst(iconst) => Ugen::FConst(FConst{value: fun(iconst.value as f32)}),
+        Ugen::FConst(fconst) => Ugen::FConst(FConst{value: fun(fconst.value)}),
+        _ => panic!("mk_unary_operator")
+    }
+}
+
 
 ////utilities
 fn iconst(val: i32) -> Box<Ugen> {
