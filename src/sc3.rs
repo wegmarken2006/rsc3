@@ -1024,24 +1024,29 @@ fn mk_operator(name: &str, inputs: UgenList, sp: i32) -> Ugen {
     mk_ugen(maxrate, &name.to_string(), inputs, outs, 0, sp)
 }
 
-use std::any::TypeId;
-fn mk_unary_operator<T>(sp: i32, fun: fn(f32) -> f32, op: T) -> Ugen where T: UgenTrait{ 
-    let op_u = Ugen::from(op);
-    match op_u {
-        Ugen::IntNum(num) => {
+//use std::any::TypeId;
+use std::any::Any;
+fn mk_unary_operator<T: Any>(sp: i32, fun: fn(f32) -> f32, op: &T) -> Ugen { 
+    let op_any = op as &Any;
+    match op_any.downcast_ref::<f32>() {
+        Some(num) => {
             let mut ops = Vec::new();
-            ops.push(Box::new(Ugen::IConst(IConst{value: num})));
-            mk_operator("UnaryOpUgen", ops, sp)
+            ops.push(Box::new(Ugen::FConst(FConst{value: *num})));
+            return mk_operator("UnaryOpUgen", ops, sp);
         },
-        Ugen::FloatNum(num) => {
-            let mut ops = Vec::new();
-            ops.push(Box::new(Ugen::FConst(FConst{value: num})));
-            mk_operator("UnaryOpUgen", ops, sp)
+        None =>  match op_any.downcast_ref::<Ugen>() {
+            Some(ugen) => {
+                match ugen {
+                    Ugen::IConst(iconst) => Ugen::FConst(FConst{value: fun(iconst.value as f32)}),
+                    Ugen::FConst(fconst) => Ugen::FConst(FConst{value: fun(fconst.value)}),
+                    _ => panic!("mk_unary_operator"),
+                }
+            },
+            None => panic!("mk_unary_operator"),
         },
-        Ugen::IConst(iconst) => Ugen::FConst(FConst{value: fun(iconst.value as f32)}),
-        Ugen::FConst(fconst) => Ugen::FConst(FConst{value: fun(fconst.value)}),
-        _ => panic!("mk_unary_operator")
     }
+
+
 }
 
 
