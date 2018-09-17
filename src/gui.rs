@@ -3,6 +3,7 @@ use iui::prelude::*;
 use iui::controls::{Label, Button, VerticalBox, Group};
 
 use osc::*;
+use ugens::*;
 
 pub fn run_gui() {
        // Initialize the UI library
@@ -26,11 +27,21 @@ pub fn run_gui() {
             sc_start();
         }
     });
+    let mut button1 = Button::new(&ui, "Play");
+    button1.on_clicked(&ui, {
+        let ui = ui.clone();
+        move |btn| {
+            btn.set_text(&ui, "Playing");
+            sc_play(&sin_osc(440.0, 0.0));
+        }
+    });
+
     let mut button2 = Button::new(&ui, "Stop");
     button2.on_clicked(&ui, {
         let ui = ui.clone();
         move |btn| {
             btn.set_text(&ui, "Stopped!");
+            sc_stop();
         }
     });
 
@@ -43,6 +54,7 @@ pub fn run_gui() {
     });
 
     group_vbox.append(&ui, button, LayoutStrategy::Compact);
+    group_vbox.append(&ui, button1, LayoutStrategy::Compact);
     group_vbox.append(&ui, button2, LayoutStrategy::Compact);
     group_vbox.append(&ui, quit_button, LayoutStrategy::Compact);
     group.set_child(&ui, group_vbox);

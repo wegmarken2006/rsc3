@@ -1,7 +1,8 @@
 use std::net;
 use std::mem;
 use std::time::Duration;
-use sc3::{print_bytes};
+use sc3::{print_bytes, synthdef, Ugen};
+use ugens::{out};
 
 pub fn encode_i8(num: i32) -> Vec<u8> {
     let n = (num & 0xff) as u8;
@@ -159,6 +160,28 @@ pub fn sc_start() {
     l_datum: vec![Datum::Int(1), Datum::Int(1), Datum::Int(0)]};
 	send_message(msg2);
 }
+
+
+pub fn sc_stop() {
+    let msg1 = Message{name: "/g_deepFree", l_datum: vec![Datum::Int(1)]};
+    send_message(msg1);
+}
+
+pub fn sc_play(ugen: &Ugen) {
+    let name = "anonymous";
+    /*
+    if isinstance(ugen, List):
+         ugen = Mce(ugens=ugen)
+         */
+    let synd = synthdef(name, &out(0, ugen));
+    let msg1 = Message{name: "/d_recv", l_datum: vec![Datum::Blob(synd)]};
+    send_message(msg1);
+    let msg2 = Message{name: "/s_new", l_datum : vec![Datum::Str(name.to_string()),
+    Datum::Int(-1), Datum::Int(1), Datum::Int(1)]};
+    send_message(msg2);
+}
+
+
 
 fn osc_set_port() {
     let listen_on = net::SocketAddrV4::new(net::Ipv4Addr::new(127, 0, 0, 1), 57110);

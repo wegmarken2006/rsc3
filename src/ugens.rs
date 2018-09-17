@@ -47,6 +47,18 @@ pub fn sin_osc(freq: f32, phase: f32) -> Ugen {
     osc.run(1)
 }
 
+fn iconst_list(val: i32) -> UgenList {
+    let mut out = Vec::new();
+    out.push(Box::new(Ugen::IConst(IConst { value: val })));
+    out
+}
+
+pub fn out(a: i32, b: &Ugen) -> Ugen {
+    return mk_filter_mce("Out", iconst_list(a), b, 0);
+}
+    
+
+
 pub fn add<T: 'static, U: 'static>(op1: T, op2: U) -> Ugen {
     return mk_binary_operator(0, |x, y| {x + y}, op1, op2);
 }
