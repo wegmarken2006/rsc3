@@ -9,6 +9,7 @@ use sc3::*;
 
 
 //////
+use std::f64;
 fn main() {
     println!("start");
     let ug1 = synthdef("anonymous", &sin_osc(440.0, 0.0));
@@ -18,6 +19,11 @@ fn main() {
     print_bytes("final macro", &ug2);
 
     //sc_start();
+
+    let yy = f64::abs(2.0);
+    let zz = -2.0;
+    let xx = mk_unary_operator(0, f64::abs, -2.0);
+    print_ugen(&xx);
     
     println!("\nend");
 

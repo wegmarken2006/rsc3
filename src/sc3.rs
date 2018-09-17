@@ -181,22 +181,6 @@ impl From<f32> for Ugen {
     }
 }
 
-trait UgenTrait {
-    fn is_ugen(self) -> bool;
-}
-
-impl UgenTrait for Ugen {
-    fn is_ugen(self) -> bool {return true;}
-}
-
-impl UgenTrait for i32 {
-    fn is_ugen(self) -> bool {return true;}
-}
-
-impl UgenTrait for f32 {
-    fn is_ugen(self) -> bool {return true;}
-}
-
 static mut G_NEXT_ID: i32 = 0;
 
 fn next_uid() -> i32 {
@@ -206,7 +190,7 @@ fn next_uid() -> i32 {
     }
 }
 
-fn print_ugen(ugen: &Ugen) {
+pub fn print_ugen(ugen: &Ugen) {
     match ugen {
         Ugen::IConst(iconst) => println!("I Value: {}", iconst.value),
         Ugen::FConst(fconst) => println!("F Value: {}", fconst.value),
@@ -1017,7 +1001,7 @@ pub fn mk_filter_mce(name: &str, inputs: UgenList, ugen: &Ugen, ou: i32) -> Ugen
     mk_filter(name, inps, ou, 0)
 }
 
-fn mk_operator(name: &str, inputs: UgenList, sp: i32) -> Ugen {
+pub fn mk_operator(name: &str, inputs: UgenList, sp: i32) -> Ugen {
     let rates = inputs.clone().into_iter().map(|x| rate_of(&x)).collect();
     let maxrate = max_rate(rates, Rate::RateKr);
     let outs = vec![maxrate];
@@ -1026,29 +1010,94 @@ fn mk_operator(name: &str, inputs: UgenList, sp: i32) -> Ugen {
 
 //use std::any::TypeId;
 use std::any::Any;
-fn mk_unary_operator<T: Any>(sp: i32, fun: fn(f32) -> f32, op: &T) -> Ugen { 
-    let op_any = op as &Any;
-    match op_any.downcast_ref::<f32>() {
+pub fn mk_unary_operator<T: Any>(sp: i32, fun: fn(f64) -> f64, op: T) -> Ugen {
+    let op_b = &op;
+    let op_any = op_b as &Any;
+    //let op_any = op as &Any;
+    match op_any.downcast_ref::<f64>() {
         Some(num) => {
             let mut ops = Vec::new();
-            ops.push(Box::new(Ugen::FConst(FConst{value: *num})));
+            ops.push(Box::new(Ugen::FConst(FConst { value: *num as f32 })));
             return mk_operator("UnaryOpUgen", ops, sp);
-        },
-        None =>  match op_any.downcast_ref::<Ugen>() {
-            Some(ugen) => {
-                match ugen {
-                    Ugen::IConst(iconst) => Ugen::FConst(FConst{value: fun(iconst.value as f32)}),
-                    Ugen::FConst(fconst) => Ugen::FConst(FConst{value: fun(fconst.value)}),
-                    _ => panic!("mk_unary_operator"),
-                }
+        }
+        None => match op_any.downcast_ref::<Ugen>() {
+            Some(ugen) => match ugen {
+                Ugen::IConst(iconst) => Ugen::FConst(FConst {
+                    value: fun(iconst.value as f64) as f32,
+                }),
+                Ugen::FConst(fconst) => Ugen::FConst(FConst {
+                    value: fun(fconst.value as f64) as f32,
+                }),
+                _ => panic!("mk_unary_operator 1"),
             },
-            None => panic!("mk_unary_operator"),
+            None => panic!("mk_unary_operator 2"),
         },
     }
-
-
 }
 
+pub fn mk_binary_operator<T: Any>(sp: i32, fun: fn(f64, f64) -> f64, op1: T, op2: T) -> Ugen {
+    let op1_b = &op1;
+    let op1_any = op1_b as &Any;
+    let op2_b = &op2;
+    let op2_any = op2_b as &Any;
+    match op1_any.downcast_ref::<f64>() {
+        Some(num) => {
+            let mut ops = Vec::new();
+            ops.push(Box::new(Ugen::FConst(FConst { value: *num as f32 })));
+            match op2_any.downcast_ref::<f64>() {
+                Some(num) => {
+                    ops.push(Box::new(Ugen::FConst(FConst { value: *num as f32 })));
+                    return mk_operator("BinaryOpUGen", ops, sp);
+                },
+                None => match op2_any.downcast_ref::<Ugen>() {
+                    Some(ugen) => {
+                        match ugen {
+                            _ => {
+                                ops.push(Box::new(ugen.clone()));
+                                return mk_operator("BinaryOpUGen", ops, sp);
+                            }
+                        }
+                    },
+                    None => panic!("mk_binary_operator 1"),
+                },
+            }
+        }
+        None => {}
+    }
+    let val1: f64;
+    let val2: f64;
+    match op1_any.downcast_ref::<Ugen>() {
+        Some(ugen) => {
+            match ugen { 
+                Ugen::IConst(iconst) => val1 = iconst.value as f64,
+                Ugen::FConst(fconst) => val1 = fconst.value as f64,
+                _ => panic!("mk_binary_operator 3"),
+            }
+            match op2_any.downcast_ref::<Ugen>() {
+                Some(ugen2) => {
+                    match ugen2 {
+                        Ugen::IConst(iconst) => val2 = iconst.value as f64,
+                        Ugen::FConst(fconst) => val2 = fconst.value as f64,
+                        _ => panic!("mk_binary_operator 4"),
+                    }
+                    return Ugen::FConst(FConst {value: fun(val1, val2) as f32});
+                },
+                None => {
+                    match op2_any.downcast_ref::<f64>() {
+                        Some(num) => {
+                            let mut ops = Vec::new();
+                            ops.push(Box::new(Ugen::FConst(FConst { value: *num as f32 })));
+                            ops.push(Box::new(ugen.clone()));
+                            return mk_operator("BinaryOpUGen", ops, sp);
+                        },
+                        None => panic!("mk_binary_operator5"),
+                    }       
+                },
+            }
+        },
+        None =>  panic!("mk_binary_operator 2"),        
+    }    
+}
 
 ////utilities
 fn iconst(val: i32) -> Box<Ugen> {
