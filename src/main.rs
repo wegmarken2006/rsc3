@@ -20,10 +20,10 @@ fn main() {
 
     //sc_start();
 
-    let yy = f64::abs(2.0);
-    let zz = -2.0;
+    
     let xx = mk_unary_operator(0, f64::abs, -2.0);
-    print_ugen(&xx);
+    let zz = add(xx.clone(), xx);
+    print_ugen(&zz);
     
     println!("\nend");
 

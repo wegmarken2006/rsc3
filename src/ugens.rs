@@ -47,6 +47,18 @@ pub fn sin_osc(freq: f32, phase: f32) -> Ugen {
     osc.run(1)
 }
 
+pub fn add<T: 'static, U: 'static>(op1: T, op2: U) -> Ugen {
+    return mk_binary_operator(0, |x, y| {x + y}, op1, op2);
+}
+
+pub fn mul<T: 'static, U: 'static>(op1: T, op2: U) -> Ugen {
+    return mk_binary_operator(0, |x, y| {x * y}, op1, op2);
+}
+
+pub fn sub<T: 'static, U: 'static>(op1: T, op2: U) -> Ugen {
+    return mk_binary_operator(0, |x, y| {x - y}, op1, op2);
+}
+
 
 macro_rules! osc_m {
     ($name: expr, $first: expr, $second: expr) => {
