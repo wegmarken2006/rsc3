@@ -74,7 +74,7 @@ pub fn sub<T: 'static, U: 'static>(op1: T, op2: U) -> Ugen {
 
 macro_rules! osc_m {
     ($name: expr, $first: expr, $second: expr) => {
-        let osc = Oscillator::new($name, $first, $second).osc.run(1) 
+        Oscillator::new($name, $first, $second).run(1) 
     };
     ($name: expr, $first: expr, $second: expr, rate: $third: expr) => {
         Oscillator::new($name, $first, $second).rate($third).run(1)

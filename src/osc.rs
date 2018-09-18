@@ -1,8 +1,10 @@
-use std::net;
-use std::mem;
-use std::time::Duration;
 use sc3::{print_bytes, synthdef, Ugen};
-use ugens::{out};
+use std::mem;
+use std::net;
+use std::time::Duration;
+//use ugens::*;
+use std::thread::*;
+use std::time::*;
 
 pub fn encode_i8(num: i32) -> Vec<u8> {
     let n = (num & 0xff) as u8;
@@ -140,31 +142,45 @@ fn send_message(message: Message) {
     osc_send(bmsg);
 }
 
-
 struct PortConfig {
     socket: Option<net::UdpSocket>,
-    addr: Option<net::SocketAddrV4>,
+    addr_str: Option<String>,
+    local_addr_str: Option<String>
 }
 
 static mut PCFG: PortConfig = PortConfig {
     socket: None,
-    addr: None,
+    addr_str: None,
+    local_addr_str: None,
 };
 
 pub fn sc_start() {
     osc_set_port();
-    let msg1 = Message{name: "/notify", l_datum: vec![Datum::Int(1)]};
-	//b'/notify\x00,i\x00\x00\x00\x00\x00\x01'
-	send_message(msg1);
-	let msg2 = Message{name: "/g_new", 
-    l_datum: vec![Datum::Int(1), Datum::Int(1), Datum::Int(0)]};
-	send_message(msg2);
+    let msg1 = Message {
+        name: "/notify",
+        l_datum: vec![Datum::Int(1)],
+    };
+    //b'/notify\x00,i\x00\x00\x00\x00\x00\x01'
+    send_message(msg1);
+    let msg2 = Message {
+        name: "/g_new",
+        l_datum: vec![Datum::Int(1), Datum::Int(1), Datum::Int(0)],
+    };
+    send_message(msg2);
+
 }
 
-
 pub fn sc_stop() {
-    let msg1 = Message{name: "/g_deepFree", l_datum: vec![Datum::Int(1)]};
+    let msg1 = Message {
+        name: "/g_deepFree",
+        l_datum: vec![Datum::Int(1)],
+    };
     send_message(msg1);
+
+    let sleep_time = Duration::from_secs(5);
+    sleep(sleep_time);
+
+    osc_close_port();
 }
 
 pub fn sc_play(ugen: &Ugen) {
@@ -173,44 +189,78 @@ pub fn sc_play(ugen: &Ugen) {
     if isinstance(ugen, List):
          ugen = Mce(ugens=ugen)
          */
-    let synd = synthdef(name, &out(0, ugen));
-    let msg1 = Message{name: "/d_recv", l_datum: vec![Datum::Blob(synd)]};
+    let synd = synthdef(name, ugen);
+    let msg1 = Message {
+        name: "/d_recv",
+        l_datum: vec![Datum::Blob(synd)],
+    };
     send_message(msg1);
-    let msg2 = Message{name: "/s_new", l_datum : vec![Datum::Str(name.to_string()),
-    Datum::Int(-1), Datum::Int(1), Datum::Int(1)]};
+    let msg2 = Message {
+        name: "/s_new",
+        l_datum: vec![
+            Datum::Str(name.to_string()),
+            Datum::Int(-1),
+            Datum::Int(1),
+            Datum::Int(1),
+        ],
+    };
     send_message(msg2);
 }
 
 
-
 fn osc_set_port() {
-    let listen_on = net::SocketAddrV4::new(net::Ipv4Addr::new(127, 0, 0, 1), 57110);
+    let mut host = String::with_capacity(128);
+    host.push_str("127.0.0.1:");
+    host.push_str("57110");
+
+    let mut local_host = String::with_capacity(128);
+    local_host.push_str("127.0.0.1:");
+    local_host.push_str("57111");
+
     unsafe {
-        PCFG.addr = Some(listen_on);
+        PCFG.addr_str = Some(host.clone());
+        PCFG.local_addr_str = Some(local_host.clone());
     }
 
-    let attempt = net::UdpSocket::bind(listen_on);
+    let attempt = net::UdpSocket::bind(local_host);
     let socket = match attempt {
         Ok(sock) => sock,
         Err(err) => panic!("Could not bind: {}", err),
     };
-    socket.set_write_timeout(Some(Duration::new(2, 0))).expect("Send timeout");
-    socket.set_read_timeout(Some(Duration::new(2, 0))).expect("Receive timeout");
+    socket
+        .set_write_timeout(Some(Duration::new(2, 0)))
+        .expect("Send timeout");
+    socket
+        .set_read_timeout(Some(Duration::new(5, 0)))
+        .expect("Receive timeout");
     unsafe {
         PCFG.socket = Some(socket);
     }
 }
 
+fn osc_close_port() {
+    unsafe {
+        let socket = match &PCFG.socket {
+            Some(sock) => sock,
+            _ => panic!("osc_close_port"),
+        };
+        drop(socket);
+    }    
+}
 fn osc_send(nmsg: Vec<u8>) {
     //SEND
     unsafe {
-        let listen_on: net::SocketAddrV4 = PCFG.addr.unwrap();
-        let socket = match &PCFG.socket {
-            Some(sock) => sock,
-            _ => panic!("osc_send socket")
+        let host = match &PCFG.addr_str {
+            Some(host) => host,
+            _ => panic!("osc_send socket"),
         };
 
-        let result = &socket.send_to(&nmsg, listen_on);
+        let socket = match &PCFG.socket {
+            Some(sock) => sock,
+            _ => panic!("osc_send socket"),
+        };
+
+        let result = &socket.send_to(&nmsg, host);
         //drop(socket);
         match result {
             Ok(amt) => println!("Sent {} bytes", amt),
@@ -218,29 +268,29 @@ fn osc_send(nmsg: Vec<u8>) {
         }
     }
 
-    osc_receive();
+    spawn(osc_receive);
 }
+
 fn osc_receive() {
     unsafe {
-        let listen_on: net::SocketAddrV4 = PCFG.addr.unwrap();
         let socket = match &PCFG.socket {
             Some(sock) => sock,
-            _ => panic!("osc_send")
+            _ => panic!("osc_send"),
         };
         //RECEIVE
         //let mut buf: [u8; 1] = [0; 1];
-        let mut buf: [u8; 512] = mem::uninitialized();
+        let mut buf: [u8; 1024] = mem::uninitialized();
         println!("Reading data ....");
         let result = socket.recv_from(&mut buf);
         //drop(socket);
-        let mut data;
+        let data;
         match result {
             Ok((amt, src)) => {
-                //println!("Received data from {}", src);
+                println!("Received data from {}", src);
                 data = Vec::from(&buf[0..amt]);
                 print_bytes("Received data:", &data);
             }
-            Err(err) => panic!("Read error: {}", err),
+            Err(_) => println!("Timeout receive error"),
         }
     }
 }
