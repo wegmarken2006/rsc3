@@ -142,16 +142,20 @@ fn send_message(message: Message) {
     osc_send(bmsg);
 }
 
-struct PortConfig {
+struct PortConfig <'a>{
     socket: Option<net::UdpSocket>,
-    addr_str: Option<String>,
-    local_addr_str: Option<String>
+    addr_str: &'a str,
+    local_addr_str: &'a str,
+    tx_timeout_secs: u64,
+    rx_timeout_secs: u64,
 }
 
 static mut PCFG: PortConfig = PortConfig {
     socket: None,
-    addr_str: None,
-    local_addr_str: None,
+    addr_str: "127.0.0.1:57110",
+    local_addr_str: "127.0.0.1:57111",
+    tx_timeout_secs: 2,
+    rx_timeout_secs: 5,
 };
 
 pub fn sc_start() {
@@ -177,7 +181,7 @@ pub fn sc_stop() {
     };
     send_message(msg1);
 
-    let sleep_time = Duration::from_secs(5);
+    let sleep_time = Duration::from_secs(2);
     sleep(sleep_time);
 
     osc_close_port();
@@ -209,17 +213,14 @@ pub fn sc_play(ugen: &Ugen) {
 
 
 fn osc_set_port() {
-    let mut host = String::with_capacity(128);
-    host.push_str("127.0.0.1:");
-    host.push_str("57110");
-
-    let mut local_host = String::with_capacity(128);
-    local_host.push_str("127.0.0.1:");
-    local_host.push_str("57111");
-
+    let local_host: &str;
+    let tx_timeout_secs: u64;
+    let rx_timeout_secs: u64;
     unsafe {
-        PCFG.addr_str = Some(host.clone());
-        PCFG.local_addr_str = Some(local_host.clone());
+        local_host = PCFG.local_addr_str;
+        tx_timeout_secs = PCFG.tx_timeout_secs;
+        rx_timeout_secs = PCFG.rx_timeout_secs;
+
     }
 
     let attempt = net::UdpSocket::bind(local_host);
@@ -228,10 +229,10 @@ fn osc_set_port() {
         Err(err) => panic!("Could not bind: {}", err),
     };
     socket
-        .set_write_timeout(Some(Duration::new(2, 0)))
+        .set_write_timeout(Some(Duration::new(tx_timeout_secs, 0)))
         .expect("Send timeout");
     socket
-        .set_read_timeout(Some(Duration::new(5, 0)))
+        .set_read_timeout(Some(Duration::new(rx_timeout_secs, 0)))
         .expect("Receive timeout");
     unsafe {
         PCFG.socket = Some(socket);
@@ -250,10 +251,7 @@ fn osc_close_port() {
 fn osc_send(nmsg: Vec<u8>) {
     //SEND
     unsafe {
-        let host = match &PCFG.addr_str {
-            Some(host) => host,
-            _ => panic!("osc_send socket"),
-        };
+        let host = PCFG.addr_str.clone();
 
         let socket = match &PCFG.socket {
             Some(sock) => sock,
