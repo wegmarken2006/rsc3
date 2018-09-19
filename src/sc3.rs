@@ -798,7 +798,9 @@ fn mrg_n(lst: &UgenList) -> Ugen {
         });
     }
     let mut newlst = Vec::new();
-    newlst.extend(lst.clone());
+    let mut tail = (*lst).clone();
+    tail.drain(0..1);
+    newlst.extend(tail);
     return Ugen::Mrg(Mrg {
         left: lst[0].clone(),
         right: Box::new(mrg_n(&newlst)),
@@ -998,6 +1000,7 @@ pub fn mk_filter_id(name: &str, inputs: UgenList, ou: i32, sp: i32) -> Ugen {
 pub fn mk_filter_mce(name: &str, inputs: UgenList, ugen: &Ugen, ou: i32) -> Ugen {
     let mut inps = Vec::new();
     inps.extend(inputs.clone());
+    inps.extend(mce_channels(ugen));
     mk_filter(name, inps, ou, 0)
 }
 

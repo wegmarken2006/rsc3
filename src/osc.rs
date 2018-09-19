@@ -2,7 +2,7 @@ use sc3::{print_bytes, synthdef, Ugen};
 use std::mem;
 use std::net;
 use std::time::Duration;
-//use ugens::*;
+use ugens::*;
 use std::thread::*;
 use std::time::*;
 
@@ -193,7 +193,7 @@ pub fn sc_play(ugen: &Ugen) {
     if isinstance(ugen, List):
          ugen = Mce(ugens=ugen)
          */
-    let synd = synthdef(name, ugen);
+    let synd = synthdef(name, &out(0, ugen));
     let msg1 = Message {
         name: "/d_recv",
         l_datum: vec![Datum::Blob(synd)],
