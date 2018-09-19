@@ -261,7 +261,10 @@ fn osc_send(nmsg: Vec<u8>) {
         let result = &socket.send_to(&nmsg, host);
         //drop(socket);
         match result {
-            Ok(amt) => println!("Sent {} bytes", amt),
+            Ok(amt) => {
+                //println!("Sent {} bytes", amt);
+                print_bytes("Txed data:", &nmsg);
+            },
             Err(err) => panic!("Write error: {}", err),
         }
     }

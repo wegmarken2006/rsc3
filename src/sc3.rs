@@ -1159,11 +1159,17 @@ fn get_node_u(node: &Node) -> NodeU {
 }
 pub fn print_bytes(name: &str, lst: &Vec<u8>) {
     println!("{}", name);
+    let mut ascii: String = "".to_string();
     for elem in lst {
         if *elem >= 32 && *elem <= 126 {
-            print!(" {:?}", *elem as char);
+            ascii.push(*elem as char);
+            //print!(" {:?}", *elem as char);
         } else {
-            print!(" {:?}", *elem);
+            if ascii.len() > 0 {
+                print!(" {:?}", &ascii);
+                ascii = "".to_string();
+            }
+            print!(" {:x}", *elem);
         }
     }
     println!("");
