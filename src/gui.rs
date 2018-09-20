@@ -40,7 +40,7 @@ pub fn run_gui() {
         let ui = ui.clone();
         move |btn| {
             btn.set_text(&ui, "Playing");
-            sc_play_vec(vec![sin_osc(440.0, 0.0), sin_osc(100.0, 0.0)]);
+            sc_play_vec(vec![mul(sin_osc(440.0, 0.0), 0.4), mul(sin_osc(100.0, 0.0), 0.4)]);
         }
     });
 

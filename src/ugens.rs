@@ -53,8 +53,14 @@ fn iconst_list(val: i32) -> UgenList {
     out
 }
 
-pub fn out(a: i32, b: &Ugen) -> Ugen {
-    return mk_filter_mce("Out", iconst_list(a), b, 0);
+
+pub fn one_pole(ugen: &Ugen, coef: f32) -> Ugen {
+    return mk_filter("OnePole", vec![Box::new(ugen.clone()), Box::new(Ugen::FConst(FConst{value: coef}))], 1, 0);
+}
+
+
+pub fn out(a: i32, ugen: &Ugen) -> Ugen {
+    return mk_filter_mce("Out", iconst_list(a), ugen, 0);
 }
     
 
