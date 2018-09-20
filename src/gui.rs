@@ -35,6 +35,14 @@ pub fn run_gui() {
             sc_play(&sin_osc(440.0, 0.0));
         }
     });
+    let mut button11 = Button::new(&ui, "Play Stereo(?)");
+    button1.on_clicked(&ui, {
+        let ui = ui.clone();
+        move |btn| {
+            btn.set_text(&ui, "Playing");
+            sc_play_vec(vec![sin_osc(440.0, 0.0), sin_osc(660.0, 0.0)]);
+        }
+    });
 
     let mut button2 = Button::new(&ui, "Stop");
     button2.on_clicked(&ui, {
@@ -55,6 +63,7 @@ pub fn run_gui() {
 
     group_vbox.append(&ui, button, LayoutStrategy::Compact);
     group_vbox.append(&ui, button1, LayoutStrategy::Compact);
+    group_vbox.append(&ui, button11, LayoutStrategy::Compact);
     group_vbox.append(&ui, button2, LayoutStrategy::Compact);
     group_vbox.append(&ui, quit_button, LayoutStrategy::Compact);
     group.set_child(&ui, group_vbox);

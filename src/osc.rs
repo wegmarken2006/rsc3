@@ -1,4 +1,4 @@
-use sc3::{print_bytes, synthdef, Ugen};
+use sc3::{print_bytes, synthdef, Ugen, Mce, Mrg};
 use std::mem;
 use std::net;
 use std::time::Duration;
@@ -154,7 +154,7 @@ static mut PCFG: PortConfig = PortConfig {
     socket: None,
     addr_str: "127.0.0.1:57110",
     local_addr_str: "127.0.0.1:57111",
-    tx_timeout_secs: 2,
+    tx_timeout_secs: 5,
     rx_timeout_secs: 5,
 };
 
@@ -189,11 +189,47 @@ pub fn sc_stop() {
 
 pub fn sc_play(ugen: &Ugen) {
     let name = "anonymous";
+    //let synd = synthdef(name, &ugen);
+    let synd = synthdef(name, &out(0, ugen));
+    let msg1 = Message {
+        name: "/d_recv",
+        l_datum: vec![Datum::Blob(synd)],
+    };
+    send_message(msg1);
+    let msg2 = Message {
+        name: "/s_new",
+        l_datum: vec![
+            Datum::Str(name.to_string()),
+            Datum::Int(-1),
+            Datum::Int(1),
+            Datum::Int(1),
+        ],
+    };
+    send_message(msg2);
+}
+
+pub fn sc_play_vec(ugens: Vec<Ugen>) {
+    let name = "anonymous";
+    let mut ulist = Vec::new();
+    let s_ugen: Ugen;
+    /*
+    if ulist.len() == 2 {
+        s_ugen = Ugen::Mrg(Mrg{left: Box::new(ugens[0].clone()), right: Box::new(ugens[1].clone())});
+    }
+    else 
+    */
+    {
+        for ugen in ugens {
+            ulist.push(Box::new(ugen));
+        }
+        s_ugen = Ugen::Mce(Mce{ugens: ulist});
+    }
     /*
     if isinstance(ugen, List):
          ugen = Mce(ugens=ugen)
          */
-    let synd = synthdef(name, &out(0, ugen));
+    let synd = synthdef(name, &s_ugen);
+    //let synd = synthdef(name, &out(0, ugen));
     let msg1 = Message {
         name: "/d_recv",
         l_datum: vec![Datum::Blob(synd)],

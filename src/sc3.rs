@@ -38,12 +38,12 @@ pub struct Primitive {
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct Mce {
-    ugens: Vec<Box<Ugen>>,
+    pub ugens: Vec<Box<Ugen>>,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct Mrg {
-    left: Box<Ugen>,
-    right: Box<Ugen>,
+    pub left: Box<Ugen>,
+    pub right: Box<Ugen>,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct Proxy {
