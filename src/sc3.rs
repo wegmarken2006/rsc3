@@ -21,14 +21,14 @@ pub struct FConst {
     pub value: f32,
 }
 #[derive(Clone, PartialEq, Debug)]
-struct Control {
+pub struct Control {
     name: String,
     index: i32,
     rate: Rate,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-struct Primitive {
+pub struct Primitive {
     name: String,
     inputs: UgenList,
     outputs: RateList,
@@ -37,16 +37,16 @@ struct Primitive {
     rate: Rate,
 }
 #[derive(Clone, PartialEq, Debug)]
-struct Mce {
+pub struct Mce {
     ugens: Vec<Box<Ugen>>,
 }
 #[derive(Clone, PartialEq, Debug)]
-struct Mrg {
+pub struct Mrg {
     left: Box<Ugen>,
     right: Box<Ugen>,
 }
 #[derive(Clone, PartialEq, Debug)]
-struct Proxy {
+pub struct Proxy {
     primitive: Primitive,
     index: i32,
 }
@@ -333,7 +333,7 @@ fn mce_extend(n: i32, ugen: &Ugen) -> UgenList {
         }
         _ => {
             let mut out: UgenList = Vec::new();
-            for ind in 1..n {
+            for _ in 1..n {
                 out.push(Box::new(ugen.clone()));
             }
             out.push(Box::new(ugen.clone()));
@@ -755,10 +755,10 @@ fn mk_node_p(node: &Node, p_idx: i32, gr: &Graph) -> (Node, Graph) {
 
 fn mk_node(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
     match ugen {
-        Ugen::IConst(iconst) => mk_node_c(ugen, gr),
-        Ugen::FConst(fconst) => mk_node_c(ugen, gr),
-        Ugen::Control(control) => mk_node_k(ugen, gr),
-        Ugen::Primitive(primitive) => mk_node_c(ugen, gr),
+        Ugen::IConst(_) => mk_node_c(ugen, gr),
+        Ugen::FConst(_) => mk_node_c(ugen, gr),
+        Ugen::Control(_) => mk_node_k(ugen, gr),
+        Ugen::Primitive(_) => mk_node_c(ugen, gr),
         Ugen::Mrg(mrg) => {
             let (_, gg) = mk_node(&*mrg.right, gr);
             mk_node(&*mrg.left, &gg)
@@ -773,7 +773,7 @@ fn mk_node(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
 
 fn implicit(num: i32) -> NodeU {
     let mut rates = Vec::new();
-    for ind in 1..(num + 1) {
+    for _ in 1..(num + 1) {
         rates.push(Rate::RateKr);
     }
     let node = NodeU {
@@ -1239,11 +1239,11 @@ fn test1() {
     let l22 = mce_channels(&mg3);
     let el10 = &(*l22[0]);
     let el11 = &(*l22[1]);
-    let el10t = match el10 {
+    let _ = match el10 {
         Ugen::Mrg(mrg) => mrg,
         _ => panic!("mce_channel test"),
     };
-    let el11t = match el11 {
+    let _ = match el11 {
         Ugen::Primitive(primitive) => primitive,
         _ => panic!("mce_channel test 2"),
     };
@@ -1254,11 +1254,11 @@ fn test1() {
     };
     let el12 = l23.ugens[0].clone();
     let el13 = l23.ugens[1].clone();
-    let el12t = match *el12 {
+    let _ = match *el12 {
         Ugen::Mce(mce) => mce,
         _ => panic!("proxify test 1"),
     };
-    let el13t = match *el13 {
+    let _ = match *el13 {
         Ugen::Primitive(primitive) => primitive,
         _ => panic!("proxify test 2"),
     };
