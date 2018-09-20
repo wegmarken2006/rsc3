@@ -224,12 +224,8 @@ pub fn sc_play_vec(ugens: Vec<Ugen>) {
         }
         s_ugen = Ugen::Mce(Mce{ugens: ulist});
     }
-    /*
-    if isinstance(ugen, List):
-         ugen = Mce(ugens=ugen)
-         */
-    let synd = synthdef(name, &s_ugen);
-    //let synd = synthdef(name, &out(0, ugen));
+    //let synd = synthdef(name, &s_ugen);
+    let synd = synthdef(name, &out(0, &s_ugen));
     let msg1 = Message {
         name: "/d_recv",
         l_datum: vec![Datum::Blob(synd)],

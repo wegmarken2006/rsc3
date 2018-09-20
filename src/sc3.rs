@@ -203,6 +203,10 @@ pub fn print_ugen(ugen: &Ugen) {
             primitive.inputs.len(),
             primitive.outputs.len()
         ),
+        Ugen::FromPortC(fc) => println!("FC nid:{}", fc.port_nid),
+        Ugen::FromPortK(fk) => println!("FK nid:{}", fk.port_nid),
+        Ugen::FromPortU(fu) => println!("FU nid:{}", fu.port_nid),
+
         Ugen::Proxy(proxy) => println!("Px Name:{}", proxy.primitive.name),
         _ => println!("Other"),
     }
@@ -699,8 +703,9 @@ fn push_u(primitive: &Primitive, gr: &Graph) -> (Node, Graph) {
 
 fn acc(mut ll: UgenList, mut nn: NodeList, gr: &Graph) -> (NodeList, Graph) {
     if ll.len() == 0 {
-        nn.clone().reverse();
-        return (nn, gr.clone());
+        let mut nn_out = nn.clone();
+        nn_out.reverse();
+        return (nn_out, gr.clone());
     } else {
         let (ng1, ng2) = mk_node(&ll[0], gr);
         nn.insert(0, ng1);

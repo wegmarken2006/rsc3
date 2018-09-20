@@ -36,11 +36,11 @@ pub fn run_gui() {
         }
     });
     let mut button11 = Button::new(&ui, "Play Stereo(?)");
-    button1.on_clicked(&ui, {
+    button11.on_clicked(&ui, {
         let ui = ui.clone();
         move |btn| {
             btn.set_text(&ui, "Playing");
-            sc_play_vec(vec![sin_osc(440.0, 0.0), sin_osc(660.0, 0.0)]);
+            sc_play_vec(vec![sin_osc(440.0, 0.0), sin_osc(100.0, 0.0)]);
         }
     });
 
