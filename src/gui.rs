@@ -32,7 +32,7 @@ pub fn run_gui() {
         let ui = ui.clone();
         move |btn| {
             btn.set_text(&ui, "Playing");
-            sc_play(&sin_osc(440.0, 0.0));
+            play_demo_1();
         }
     });
     let mut button11 = Button::new(&ui, "Play Stereo(?)");
@@ -40,7 +40,7 @@ pub fn run_gui() {
         let ui = ui.clone();
         move |btn| {
             btn.set_text(&ui, "Playing");
-            sc_play_vec(vec![mul(sin_osc(440.0, 0.0), 0.4), mul(sin_osc(100.0, 0.0), 0.4)]);
+            play_demo_2();
         }
     });
 
