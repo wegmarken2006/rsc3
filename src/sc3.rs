@@ -536,7 +536,7 @@ fn mk_ugen(
         rate: rate,
     };
     let pr1 = Ugen::Primitive(spr1);
-    proxify(&pr1)
+    proxify(&mce_expand(&pr1))
 }
 
 fn node_c_value(nodec: &NodeC) -> f32 {
@@ -835,8 +835,8 @@ fn synth(ugen: &Ugen) -> Graph {
     let (_, gr) = mk_node(&root, &empty_graph());
     let cs = gr.constants.clone();
     let ks = gr.controls.clone();
-    let us = gr.ugens.clone();
-    //reverse us
+    let mut us = gr.ugens.clone();
+    us.reverse();
     let mut us1 = Vec::new();
     us1.extend(us);
     if ks.len() != 0 {
@@ -877,7 +877,7 @@ fn mk_input(mp: &MMap, fp: &Ugen) -> Input {
         },
         Ugen::FromPortU(fu) => Input {
             u: fetch(fu.port_nid, mp.us.clone()),
-            p: fu.port_nid,
+            p: fu.port_idx,
         },
         _ => panic!("mk_input"),
     }
