@@ -500,7 +500,7 @@ fn proxify(ugen: &Ugen) -> Ugen {
             })
         }
         Ugen::Primitive(primitive) => {
-            let ln = primitive.inputs.len();
+            let ln = primitive.outputs.len();
             if ln < 2 {
                 return ugen.clone();
             }
@@ -758,7 +758,7 @@ fn mk_node(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
         Ugen::IConst(_) => mk_node_c(ugen, gr),
         Ugen::FConst(_) => mk_node_c(ugen, gr),
         Ugen::Control(_) => mk_node_k(ugen, gr),
-        Ugen::Primitive(_) => mk_node_c(ugen, gr),
+        Ugen::Primitive(_) => mk_node_u(ugen, gr),
         Ugen::Mrg(mrg) => {
             let (_, gg) = mk_node(&*mrg.right, gr);
             mk_node(&*mrg.left, &gg)
