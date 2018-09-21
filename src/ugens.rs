@@ -12,7 +12,7 @@ pub struct Oscillator {
 
 impl Oscillator {
     pub fn new(name: &str, freq: f32, phase: f32) -> Oscillator {
-        let mut osc = Oscillator {
+        let osc = Oscillator {
             name: name.to_string(),
             freq: freq,
             phase: phase,
@@ -26,7 +26,7 @@ impl Oscillator {
         self.rate = rate;
         self
     }
-    pub fn run(mut self, ou: i32) -> Ugen {
+    pub fn run(self, ou: i32) -> Ugen {
         let inputs = const_vec(vec![self.freq, self.phase]);
         let osc = mk_oscillator(self.rate, &self.name, inputs, ou);
         osc
@@ -53,10 +53,14 @@ fn iconst_list(val: i32) -> UgenList {
 }
 
 
-pub fn one_pole(ugen: &Ugen, coef: f32) -> Ugen {
-    return mk_filter("OnePole", vec![Box::new(ugen.clone()), Box::new(Ugen::FConst(FConst{value: coef}))], 1, 0);
+pub fn one_pole(ugen: Ugen, coef: f32) -> Ugen {
+    return mk_filter("OnePole", vec![Box::new(ugen.clone()), Box::new(Ugen::FConst(FConst{value: coef}))], 1);
 }
-
+/*
+(define one-pole
+  (lambda (input coef)
+    (mk-ugen (list "OnePole" (list 0) (list input coef) nil 1 nil nil))))
+*/
 
 pub fn out(a: i32, ugen: &Ugen) -> Ugen {
     return mk_filter_mce("Out", iconst_list(a), ugen, 0);
@@ -66,27 +70,37 @@ pub fn brown_noise () -> Ugen {
     return mk_osc_id(Rate::RateAr, "BrownNoise", vec![], 1);
 }
 
-pub fn lpf(ugen: &Ugen, coef: f32) -> Ugen {
-    return mk_filter("LPF", vec![Box::new(ugen.clone()), Box::new(Ugen::FConst(FConst{value: coef}))], 1, 0);
+pub fn lpf(ugen: Ugen, freq: f32) -> Ugen {
+    return mk_filter("LPF", vec![Box::new(ugen.clone()), Box::new(Ugen::FConst(FConst{value: freq}))], 1);
 }
-    
+/*
+(define lpf
+  (lambda (input freq)
+    (mk-ugen (list "LPF" (list 0) (list input freq) nil 1 nil nil))))
+*/
 
-pub fn rhpf(ugen1: &Ugen, ugen2: &Ugen, coef: f32) -> Ugen {
+pub fn rhpf(ugen1: Ugen, ugen2: Ugen, coef: f32) -> Ugen {
     return mk_filter("RHPF", vec![Box::new(ugen1.clone()), Box::new(ugen2.clone()), 
-    Box::new(Ugen::FConst(FConst{value: coef}))], 1, 0);
+    Box::new(Ugen::FConst(FConst{value: coef}))], 1);
 }
     
 
+use std::any::Any;
 
-pub fn add<T: 'static, U: 'static>(op1: T, op2: U) -> Ugen {
+pub fn add<T: Any, U: Any>(op1: T, op2: U) -> Ugen {
     return mk_binary_operator(0, |x, y| {x + y}, op1, op2);
 }
 
+/*
 pub fn mul<T: 'static, U: 'static>(op1: T, op2: U) -> Ugen {
     return mk_binary_operator(0, |x, y| {x * y}, op1, op2);
 }
+*/
+pub fn mul<T: Any, U: Any>(op1: T, op2: U) -> Ugen {
+    return mk_binary_operator(0, |x, y| {x * y}, op1, op2);
+}
 
-pub fn sub<T: 'static, U: 'static>(op1: T, op2: U) -> Ugen {
+pub fn sub<T: Any, U: Any>(op1: T, op2: U) -> Ugen {
     return mk_binary_operator(0, |x, y| {x - y}, op1, op2);
 }
 
@@ -95,16 +109,23 @@ pub fn play_demo_1() {
 }
 
 pub fn play_demo_2() {
-    let ug20 = one_pole(&brown_noise(), 0.99);
-    let ug21 = lpf(&brown_noise(), 14.0);
-    let ug210 = mul(&ug21, 400.0);
-    let ug22 = add(&ug210, 500.0);
-    let ug220 = rhpf(&ug20, &ug22, 0.03);
-    let ug100 = mul(&ug220, 0.03);
+    let ug0 = mul(rhpf(one_pole(brown_noise(), 0.99), add(mul(lpf(brown_noise(), 14.0), 400.0), 500.0), 0.03), 0.003);
+    let ug1 = mul(rhpf(one_pole(brown_noise(), 0.99), add(mul(lpf(brown_noise(), 20.0), 800.0), 1000.0), 0.03), 0.005);
 
-    sc_play_vec(vec![ug100.clone(), ug100]);
+    let ug2 = mul(4.0, add(ug0, ug1));
+    sc_play_vec(vec![ug2.clone(), ug2]);
     //sc_play_vec(vec![mul(sin_osc(440.0, 0.0), 0.1), mul(sin_osc(100.0, 0.0), 0.1)]);
 }
+
+/*
+{
+({RHPF.ar(OnePole.ar(BrownNoise.ar, 0.99), LPF.ar(BrownNoise.ar, 14)
+* 400 + 500, 0.03, 0.003)}!2)
++ ({RHPF.ar(OnePole.ar(BrownNoise.ar, 0.99), LPF.ar(BrownNoise.ar, 20)
+* 800 + 1000, 0.03, 0.005)}!2)
+* 4
+}.play
+*/
 
 
 macro_rules! osc_m {

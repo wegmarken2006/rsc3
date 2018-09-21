@@ -68,7 +68,7 @@ fn extend_(pad: u8, bts: &Vec<u8>) -> Vec<u8> {
     let n = align(bts.len() as i32);
     let mut out = Vec::new();
     out.extend(bts);
-    for ind in 0..n {
+    for _ in 0..n {
         out.push(pad);
     }
     out

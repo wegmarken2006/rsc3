@@ -348,7 +348,7 @@ fn mce_extend(n: i32, ugen: &Ugen) -> UgenList {
 
 fn is_mce(ugen: &Ugen) -> bool {
     match ugen {
-        Ugen::Mce(mce) => true,
+        Ugen::Mce(_) => true,
         _ => false,
     }
 }
@@ -954,7 +954,7 @@ pub fn synthdef(name: &str, ugen: &Ugen) -> Vec<u8> {
 
 pub fn mk_osc_me(rate: Rate, name: &str, inputs: UgenList, ugen: &Ugen, ou: i32) -> Ugen {
     let mut rl = Vec::new();
-    for ind in 0..ou {
+    for _ in 0..ou {
         rl.push(rate);
     }
     let mut inps = Vec::new();
@@ -966,7 +966,7 @@ pub fn mk_osc_me(rate: Rate, name: &str, inputs: UgenList, ugen: &Ugen, ou: i32)
 
 pub fn mk_osc_id(rate: Rate, name: &str, inputs: UgenList, ou: i32) -> Ugen {
     let mut rl = Vec::new();
-    for ind in 0..ou {
+    for _ in 0..ou {
         rl.push(rate);
     }
 
@@ -975,38 +975,39 @@ pub fn mk_osc_id(rate: Rate, name: &str, inputs: UgenList, ou: i32) -> Ugen {
 
 pub fn mk_oscillator(rate: Rate, name: &str, inputs: UgenList, ou: i32) -> Ugen {
     let mut rl = Vec::new();
-    for ind in 0..ou {
+    for _ in 0..ou {
         rl.push(rate);
     }
 
     mk_ugen(rate, &name.to_string(), inputs, rl, 0, 0)
 }
 
-pub fn mk_filter(name: &str, inputs: UgenList, ou: i32, sp: i32) -> Ugen {
+pub fn mk_filter(name: &str, inputs: UgenList, ou: i32) -> Ugen {
     let rates = inputs.clone().into_iter().map(|x| rate_of(&x)).collect();
     let maxrate = max_rate(rates, Rate::RateKr);
     let mut ou_list = Vec::new();
     for _ in 0..ou {
         ou_list.push(maxrate);
     }
-    mk_ugen(maxrate, &name.to_string(), inputs, ou_list, 0, sp)
+    mk_ugen(maxrate, &name.to_string(), inputs, ou_list, 0, 0)
 }
 
-pub fn mk_filter_id(name: &str, inputs: UgenList, ou: i32, sp: i32) -> Ugen {
+
+pub fn mk_filter_id(name: &str, inputs: UgenList, ou: i32) -> Ugen {
     let rates = inputs.clone().into_iter().map(|x| rate_of(&x)).collect();
     let maxrate = max_rate(rates, Rate::RateKr);
     let mut ou_list = Vec::new();
     for _ in 0..ou {
         ou_list.push(maxrate);
     }
-    mk_ugen(maxrate, &name.to_string(), inputs, ou_list, next_uid(), sp)
+    mk_ugen(maxrate, &name.to_string(), inputs, ou_list, next_uid(), 0)
 }
 
 pub fn mk_filter_mce(name: &str, inputs: UgenList, ugen: &Ugen, ou: i32) -> Ugen {
     let mut inps = Vec::new();
     inps.extend(inputs.clone());
     inps.extend(mce_channels(ugen));
-    mk_filter(name, inps, ou, 0)
+    mk_filter(name, inps, ou)
 }
 
 pub fn mk_operator(name: &str, inputs: UgenList, sp: i32) -> Ugen {
