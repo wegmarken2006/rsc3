@@ -60,6 +60,9 @@ pub fn one_pole(ugen: Ugen, coef: f32) -> Ugen {
 (define one-pole
   (lambda (input coef)
     (mk-ugen (list "OnePole" (list 0) (list input coef) nil 1 nil nil))))
+
+(define construct-ugen
+  (lambda (name rate inputs mce outputs special id)
 */
 
 pub fn out(a: i32, ugen: &Ugen) -> Ugen {
