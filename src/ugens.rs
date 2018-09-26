@@ -108,7 +108,13 @@ pub fn sub<T: Any, U: Any>(op1: T, op2: U) -> Ugen {
 }
 
 pub fn play_demo_1() {
-    sc_play(&sin_osc(440.0, 0.0));
+    //sc_play(&sin_osc(440.0, 0.0));
+    let ug0 = mul(rhpf(one_pole(brown_noise(), 0.99), add(mul(lpf(brown_noise(), 14.0), 400.0), 500.0), 0.03), 1.003);
+    let ug1 = mul(rhpf(one_pole(brown_noise(), 0.99), add(mul(lpf(brown_noise(), 20.0), 800.0), 1000.0), 0.03), 1.005);
+
+    let ug2 = mul(4.0, add(ug0, ug1));
+    sc_play(&ug2);
+
 }
 
 pub fn play_demo_2() {
@@ -128,6 +134,31 @@ pub fn play_demo_2() {
 * 800 + 1000, 0.03, 0.005)}!2)
 * 4
 }.play
+*/
+
+/*
+"/d_recv" 0 ",b" 0 0 0 0 2 1d "SCgf" 0 0 0 0 0 1 9 "anonymous" 0 c "A" a0 0 0 "DH" 0 0 "Dz" 0 0 "?" 80 a3 d7 "<" f5 c2 8f "A`" 0 0 "C" 
+c8 0 0 "C" fa 0 0 "?}p" a4 "?" 80 "bN@" 80 0 0 0 0 0 0 0 0 0 0 0 13 
+a "BrownNoise" 2 0 0 0 1 0 0 2 
+7 "OnePole" 2 0 2 0 1 0 0 0 0 0 0 ff ff 0 8 2 
+a "BrownNoise" 2 0 0 0 1 0 0 2 
+3 "LPF" 2 0 2 0 1 0 0 0 2 0 0 ff ff 0 5 2 
+c "BinaryOpUGen" 2 0 2 0 1 0 2 ff ff 0 6 0 3 0 0 2 
+c "BinaryOpUGen" 2 0 2 0 1 0 0 ff ff 0 7 0 4 0 0 2 
+4 "RHPF" 2 0 3 0 1 0 0 0 1 0 0 0 5 0 0 ff ff 0 4 2 
+c "BinaryOpUGen" 2 0 2 0 1 0 2 ff ff 0 9 0 6 0 0 2 
+a "BrownNoise" 2 0 0 0 1 0 0 2 
+7 "OnePole" 2 0 2 0 1 0 0 0 8 0 0 ff ff 0 8 2 
+a "BrownNoise" 2 0 0 0 1 0 0 2 
+3 "LPF" 2 0 2 0 1 0 0 0 a 0 0 ff ff 0 0 2 
+c "BinaryOpUGen" 2 0 2 0 1 0 2 ff ff 0 1 0 b 0 0 2 
+c "BinaryOpUGen" 2 0 2 0 1 0 0 ff ff 0 2 0 c 0 0 2 
+4 "RHPF" 2 0 3 0 1 0 0 0 9 0 0 0 d 0 0 ff ff 0 4 2 
+c "BinaryOpUGen" 2 0 2 0 1 0 2 ff ff 0 3 0 e 0 0 2 
+c "BinaryOpUGen" 2 0 2 0 1 0 0 0 7 0 0 0 f 0 0 2 
+c "BinaryOpUGen" 2 0 2 0 1 0 2 ff ff 0 a 0 10 0 0 2 
+3 "Out" 2 0 2 0 0 0 0 ff ff 0 b 0 11 0 0 0 0 0
+
 */
 
 

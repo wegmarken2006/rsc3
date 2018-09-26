@@ -190,19 +190,27 @@ fn next_uid() -> i32 {
     }
 }
 
-pub fn print_ugen(ugen: &Ugen) {
+pub fn print_ugen(level: i32, ugen: &Ugen) {
+    for ind in 0..level {
+        print!("-");
+    }
     match ugen {
         Ugen::IConst(iconst) => println!("I Value: {}", iconst.value),
         Ugen::FConst(fconst) => println!("F Value: {}", fconst.value),
         Ugen::Control(control) => println!("K Name: {}", control.name),
         Ugen::Mce(mce) => println!("MC Ulen: {}", mce.ugens.len()),
         Ugen::Mrg(mrg) => println!("MG "),
-        Ugen::Primitive(primitive) => println!(
+        Ugen::Primitive(primitive) => { 
+            println!(
             "P Name: {} IL:{}, OL:{}",
             primitive.name,
             primitive.inputs.len(),
             primitive.outputs.len()
-        ),
+            );
+            for elem in &primitive.inputs {
+                print_ugen(level + 1, elem);
+            }
+        },
         Ugen::FromPortC(fc) => println!("FC nid:{}", fc.port_nid),
         Ugen::FromPortK(fk) => println!("FK nid:{}", fk.port_nid),
         Ugen::FromPortU(fu) => println!("FU nid:{}", fu.port_nid),
@@ -304,17 +312,6 @@ pub fn compare_ugen(ugen1: &Ugen, ugen2: &Ugen) -> bool{
             }
             return false;
         }
-
-        /*
-        Ugen::Primitive(primitive) => println!(
-            "P Name: {} IL:{}, OL:{}",
-            primitive.name,
-            primitive.inputs.len(),
-            primitive.outputs.len()
-        ),
-
-        Ugen::Proxy(proxy) => println!("Px Name:{}", proxy.primitive.name),
-        */
         _ => false,
     }
 }
@@ -322,7 +319,7 @@ pub fn compare_ugen(ugen1: &Ugen, ugen2: &Ugen) -> bool{
 
 fn print_ugens(ugens: &UgenList) {
     for ugen in ugens {
-        print_ugen(&ugen);
+        print_ugen(0, &ugen);
     }
 }
 
@@ -936,6 +933,7 @@ fn mrg_n(lst: &UgenList) -> Ugen {
 }
 
 fn prepare_root(ugen: &Ugen) -> Ugen {
+    //print_ugen(0, ugen); //PROVA
     match ugen {
         Ugen::Mce(mce) => mrg_n(&mce.ugens),
         Ugen::Mrg(mrg) => {
@@ -1068,7 +1066,8 @@ fn encode_graphdef(name: &String, graph: &Graph) -> Vec<u8> {
 
 pub fn synthdef(name: &str, ugen: &Ugen) -> Vec<u8> {
     let graph = synth(ugen);
-    encode_graphdef(&name.to_string(), &graph)
+    let eg = encode_graphdef(&name.to_string(), &graph);
+    eg
 }
 
 pub fn mk_osc_me(rate: Rate, name: &str, inputs: UgenList, ugen: &Ugen, ou: i32) -> Ugen {

@@ -142,6 +142,11 @@ fn send_message(message: Message) {
     osc_send(bmsg);
 }
 
+fn send_message_async(message: Message) {
+    let bmsg = encode_message(message);
+    osc_send_async(bmsg);
+}
+
 struct PortConfig <'a>{
     socket: Option<net::UdpSocket>,
     addr_str: &'a str,
@@ -195,7 +200,7 @@ pub fn sc_play(ugen: &Ugen) {
         name: "/d_recv",
         l_datum: vec![Datum::Blob(synd)],
     };
-    send_message(msg1);
+    send_message_async(msg1);
     let msg2 = Message {
         name: "/s_new",
         l_datum: vec![
@@ -280,7 +285,19 @@ fn osc_close_port() {
         drop(socket);
     }    
 }
+
 fn osc_send(nmsg: Vec<u8>) {
+    osc_send_base(nmsg);
+    spawn(osc_receive);
+}
+
+fn osc_send_async(nmsg: Vec<u8>) {
+    osc_send_base(nmsg);
+    let data = osc_receive();
+    //TODO check received "/done"
+}
+
+fn osc_send_base(nmsg: Vec<u8>) {
     //SEND
     unsafe {
         let host = PCFG.addr_str.clone();
@@ -300,11 +317,9 @@ fn osc_send(nmsg: Vec<u8>) {
             Err(err) => panic!("Write error: {}", err),
         }
     }
-
-    spawn(osc_receive);
 }
 
-fn osc_receive() {
+fn osc_receive() -> Vec<u8>{
     unsafe {
         let socket = match &PCFG.socket {
             Some(sock) => sock,
@@ -316,14 +331,17 @@ fn osc_receive() {
         println!("Reading data ....");
         let result = socket.recv_from(&mut buf);
         //drop(socket);
-        let data;
-        match result {
+        let data = match result {
             Ok((amt, src)) => {
                 println!("Received data from {}", src);
-                data = Vec::from(&buf[0..amt]);
-                print_bytes("Received data:", &data);
+                Vec::from(&buf[0..amt])                
             }
-            Err(_) => println!("Timeout receive error"),
-        }
+            Err(_) => {
+                println!("Timeout receive error");
+                Vec::new()
+            }
+        };
+        print_bytes("Received data:", &data);
+        return data;
     }
 }
