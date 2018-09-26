@@ -112,8 +112,8 @@ pub fn play_demo_1() {
 }
 
 pub fn play_demo_2() {
-    let ug0 = mul(rhpf(one_pole(brown_noise(), 0.99), add(mul(lpf(brown_noise(), 14.0), 400.0), 500.0), 0.03), 0.003);
-    let ug1 = mul(rhpf(one_pole(brown_noise(), 0.99), add(mul(lpf(brown_noise(), 20.0), 800.0), 1000.0), 0.03), 0.005);
+    let ug0 = mul(rhpf(one_pole(brown_noise(), 0.99), add(mul(lpf(brown_noise(), 14.0), 400.0), 500.0), 0.03), 1.003);
+    let ug1 = mul(rhpf(one_pole(brown_noise(), 0.99), add(mul(lpf(brown_noise(), 20.0), 800.0), 1000.0), 0.03), 1.005);
 
     let ug2 = mul(4.0, add(ug0, ug1));
     sc_play_vec(vec![ug2.clone(), ug2]);

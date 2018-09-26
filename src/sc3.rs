@@ -212,6 +212,114 @@ pub fn print_ugen(ugen: &Ugen) {
     }
 }
 
+pub fn compare_ugen(ugen1: &Ugen, ugen2: &Ugen) -> bool{
+    match (ugen1, ugen2) {
+        (Ugen::IConst(iconst1),  Ugen::IConst(iconst2)) => {
+            if iconst1.value == iconst2.value {
+                return true;
+            }
+            else {
+                return false;
+            }
+        },
+        (Ugen::FConst(fconst1),  Ugen::FConst(fconst2)) => {
+            if fconst1.value == fconst2.value {
+                return true;
+            }
+            else {
+                return false;
+            }
+        },
+        (Ugen::Control(contr1),  Ugen::Control(contr2)) => {
+            if contr1.name == contr2.name && contr1.index == contr2.index && 
+            rate_id(contr1.rate) == rate_id(contr2.rate) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        },
+        (Ugen::Primitive(pr1),  Ugen::Primitive(pr2)) => {
+            if pr1.inputs.len() != pr2.inputs.len() || pr1.outputs.len() != pr2.outputs.len() {
+                return false;
+            }
+            let out_matching = pr1.outputs.iter().zip(pr2.outputs.iter()).filter(|&(x, y)| rate_id(*x) == rate_id(*y)).count();
+            if out_matching != pr1.outputs.len() {
+                return false;
+            }
+            let in_matching = pr1.inputs.iter().zip(pr2.inputs.iter()).filter(|&(x, y)| compare_ugen(x, y)).count();
+            if in_matching != pr1.inputs.len() {
+                return false;
+            }
+
+            if pr1.name == pr2.name && pr1.index == pr2.index && pr1.special == pr2.special && 
+            rate_id(pr1.rate) == rate_id(pr2.rate) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+        (Ugen::Mce(mce1),  Ugen::Mce(mce2)) => {
+            if mce1.ugens.len() != mce2.ugens.len() {
+                return false;
+            }
+            let u_matching = mce1.ugens.iter().zip(mce2.ugens.iter()).filter(|&(x, y)| compare_ugen(x, y)).count();
+            if u_matching != mce1.ugens.len() {
+                return false;
+            }
+            return true;
+        }
+        (Ugen::Mrg(mrg1),  Ugen::Mrg(mrg2)) => {
+            if compare_ugen(&Box::new(&mrg1.left), &Box::new(&mrg2.left)) &&
+            compare_ugen(&Box::new(&mrg1.right), &Box::new(&mrg2.right)) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+        (Ugen::FromPortC(fc1), Ugen::FromPortC(fc2)) => {
+            if fc1.port_nid == fc2.port_nid {
+                return true;
+            }
+            return false;
+        }
+        (Ugen::FromPortK(fk1), Ugen::FromPortK(fk2)) => {
+            if fk1.port_nid == fk2.port_nid {
+                return true;
+            }
+            return false;
+        }
+        (Ugen::FromPortU(fu1), Ugen::FromPortU(fu2)) => {
+            if fu1.port_nid == fu2.port_nid && fu1.port_idx == fu2.port_idx {
+                return true;
+            }
+            return false;
+        }
+        (Ugen::Proxy(px1), Ugen::Proxy(px2)) => {
+            if px1.index == px2.index && 
+            compare_ugen(&Ugen::Primitive(px1.primitive.clone()), &Ugen::Primitive(px2.primitive.clone())) {
+                return true;
+            }
+            return false;
+        }
+
+        /*
+        Ugen::Primitive(primitive) => println!(
+            "P Name: {} IL:{}, OL:{}",
+            primitive.name,
+            primitive.inputs.len(),
+            primitive.outputs.len()
+        ),
+
+        Ugen::Proxy(proxy) => println!("Px Name:{}", proxy.primitive.name),
+        */
+        _ => false,
+    }
+}
+
+
 fn print_ugens(ugens: &UgenList) {
     for ugen in ugens {
         print_ugen(&ugen);
@@ -242,8 +350,8 @@ fn extend(ugens: &UgenList, new_len: i32) -> UgenList {
     }
 }
 
-fn rate_id(rate: Rate) {
-    rate as i32;
+fn rate_id(rate: Rate) -> i32 {
+    rate as i32
 }
 
 fn is_sink(ugen: &Ugen) -> bool {
@@ -673,8 +781,21 @@ fn mk_node_k(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
     return push_k(&control, &gr.clone());
 }
 
-fn find_u_p(rate: Rate, name: &String, id: i32, node: &NodeU) -> bool {
-    if node.rate == rate && node.name == *name && node.id == id {
+fn find_u_p(rate: Rate, name: &String, inputs: &UgenList, outputs: &RateList, 
+            id: i32, sp: i32, node: &NodeU) -> bool {
+    if inputs.len() != node.inputs.len() || outputs.len() != node.outputs.len() {
+        return false;
+    }
+    let out_matching = outputs.iter().zip(node.outputs.iter()).filter(|&(x, y)| rate_id(*x) == rate_id(*y)).count();
+    if out_matching != outputs.len() {
+        return false;
+    }
+    let in_matching = inputs.iter().zip(node.inputs.iter()).filter(|&(x, y)| compare_ugen(x, y)).count();
+    if in_matching != inputs.len() {
+        return false;
+    }
+
+    if node.rate == rate && node.name == *name && node.id == id  && node.special == sp {
         return true;
     }
     return false;
@@ -727,16 +848,18 @@ fn mk_node_u(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
     let name = primitive.name.clone();
     let rate = primitive.rate;
     let index = primitive.index;
+    let special = primitive.special;
+    let outputs = primitive.outputs.clone();
     for nd2 in &gnew.ugens {
-        if find_u_p(rate, &name, index, nd2) {
+        if find_u_p(rate, &name, &inputs2, &outputs, index, special, nd2) {
             return (Node::NodeU(nd2.clone()), gnew.clone());
         }
     }
     let pr = Primitive {
         name: name,
         inputs: inputs2,
-        outputs: primitive.outputs.clone(),
-        special: primitive.special,
+        outputs: outputs,
+        special: special,
         index: index,
         rate: rate,
     };
@@ -892,7 +1015,7 @@ fn encode_node_u(mp: &MMap, node: &NodeU) -> Vec<u8> {
     let len1 = node.inputs.len();
     let len2 = node.outputs.len();
     let mut out = str_pstr(&node.name);
-    out.extend(encode_i8(node.rate as i32));
+    out.extend(encode_i8(rate_id(node.rate)));
     out.extend(encode_i16(len1 as i32));
     out.extend(encode_i16(len2 as i32));
     out.extend(encode_i16(node.special));
@@ -900,7 +1023,7 @@ fn encode_node_u(mp: &MMap, node: &NodeU) -> Vec<u8> {
         out.extend(encode_input(mk_input(mp, &*elem)));
     }
     for elem in node.outputs.clone() {
-        out.extend(encode_i8(elem as i32));
+        out.extend(encode_i8(rate_id(elem)));
     }
     out
 }
@@ -933,17 +1056,13 @@ fn encode_graphdef(name: &String, graph: &Graph) -> Vec<u8> {
     }
     out.extend(a7);
     out.extend(encode_i16(graph.controls.len() as i32));
-    let mut a9 = Vec::new();
     for elem in graph.controls.clone() {
-        a9.extend(encode_node_k(&mm, &elem));
+        out.extend(encode_node_k(&mm, &elem));
     }
-    out.extend(a9);
     out.extend(encode_i16(graph.ugens.len() as i32));
-    let mut a10 = Vec::new();
     for elem in graph.ugens.clone() {
-        a10.extend(encode_node_u(&mm, &elem));
+        out.extend(encode_node_u(&mm, &elem));
     }
-    out.extend(a10);
     out
 }
 
@@ -1338,4 +1457,17 @@ fn test1() {
     assert_eq!(find_c_p(320 as f32, &get_node_c(&ndc1)), true);
     assert_eq!(nnc10.id, 20);
     assert_eq!(nnk11.id, 30);
+    assert_eq!(compare_ugen(&p1, &p1), true);
+    assert_eq!(compare_ugen(&p1, &p2), false);
+    assert_eq!(compare_ugen(&mc1, &mc1), true);
+    assert_eq!(compare_ugen(&mc1, &p2), false);
+    assert_eq!(compare_ugen(&mc1, &mc2), true);
+    assert_eq!(compare_ugen(&mc1, &mc3), false);
+    assert_eq!(compare_ugen(&mg1, &mg1), true);
+    assert_eq!(compare_ugen(&mg1, &p2), false);
+    assert_eq!(compare_ugen(&ci1, &ci1), true);
+    assert_eq!(compare_ugen(&cf1, &cf1), true);
+    assert_eq!(compare_ugen(&ci1, &cf1), false);
+    
+
 }
