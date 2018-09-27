@@ -202,8 +202,9 @@ pub fn print_ugen(level: i32, ugen: &Ugen) {
         Ugen::Mrg(mrg) => println!("MG "),
         Ugen::Primitive(primitive) => { 
             println!(
-            "P Name: {} IL:{}, OL:{}",
+            "P Name: {} ID:{}, IL:{}, OL:{}",
             primitive.name,
+            primitive.index,
             primitive.inputs.len(),
             primitive.outputs.len()
             );
@@ -958,6 +959,7 @@ fn empty_graph() -> Graph {
 
 fn synth(ugen: &Ugen) -> Graph {
     let root = prepare_root(ugen);
+    print_ugen(0, &root); //DEBUG
     let (_, gr) = mk_node(&root, &empty_graph());
     let cs = gr.constants.clone();
     let ks = gr.controls.clone();
@@ -1070,7 +1072,7 @@ pub fn synthdef(name: &str, ugen: &Ugen) -> Vec<u8> {
     eg
 }
 
-pub fn mk_osc_me(rate: Rate, name: &str, inputs: UgenList, ugen: &Ugen, ou: i32) -> Ugen {
+pub fn mk_osc_mce(rate: Rate, name: &str, inputs: UgenList, ugen: &Ugen, ou: i32) -> Ugen {
     let mut rl = Vec::new();
     for _ in 0..ou {
         rl.push(rate);
