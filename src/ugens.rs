@@ -78,14 +78,6 @@ pub fn one_pole(ugen: Ugen, coef: f32) -> Ugen {
         1,
     );
 }
-/*
-(define one-pole
-  (lambda (input coef)
-    (mk-ugen (list "OnePole" (list 0) (list input coef) nil 1 nil nil))))
-
-(define construct-ugen
-  (lambda (name rate inputs mce outputs special id)
-*/
 
 pub fn out(a: i32, ugen: &Ugen) -> Ugen {
     return mk_filter_mce("Out", iconst_list(a), ugen, 0);
@@ -105,11 +97,6 @@ pub fn lpf(ugen: Ugen, freq: f32) -> Ugen {
         1,
     );
 }
-/*
-(define lpf
-  (lambda (input freq)
-    (mk-ugen (list "LPF" (list 0) (list input freq) nil 1 nil nil))))
-*/
 
 pub fn rhpf(ugen1: Ugen, ugen2: Ugen, coef: f32) -> Ugen {
     return mk_filter(

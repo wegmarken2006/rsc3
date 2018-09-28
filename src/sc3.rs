@@ -1170,6 +1170,17 @@ pub fn mk_unary_operator<T: Any>(sp: i32, fun: fn(f64) -> f64, op: T) -> Ugen {
 }
 
 pub fn mk_binary_operator(sp: i32, fun: fn(f64, f64) -> f64, op1: Ugen, op2: Ugen) -> Ugen {
+    match op1 {
+        Ugen::FConst(fconst1) => {
+            match op2 {
+                Ugen::FConst(fconst2) => {
+                    return Ugen::FConst(FConst {value: fun(fconst1.value as f64, fconst2.value as f64) as f32});
+                },
+                _ => {}
+            }
+        },
+        _ => {}
+    }
     return mk_operator("BinaryOpUGen", vec![Box::new(op1), Box::new(op2)], sp);
 }
 

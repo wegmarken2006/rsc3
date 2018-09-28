@@ -1,6 +1,8 @@
 use std::io::BufReader;
 use std::io::BufRead;
 use std::fs::File;
+use sc3::{Ugen};
+
 
 pub fn print_bytes(name: &str, lst: &Vec<u8>) {
     println!("{}", name);
