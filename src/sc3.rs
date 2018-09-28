@@ -793,7 +793,7 @@ fn find_u_p(rate: Rate, name: &String, inputs: &UgenList, outputs: &RateList,
         return false;
     }
 
-    if node.rate == rate && node.name == *name && node.id == id  && node.special == sp {
+    if node.rate == rate && node.name == *name && node.ugen_id == id  && node.special == sp {
         return true;
     }
     return false;
@@ -838,7 +838,8 @@ fn mk_node_u(ugen: &Ugen, gr: &Graph) -> (Node, Graph) {
         Ugen::Primitive(primitive) => primitive,
         _ => panic!("mk_node_u"),
     };
-    let (ng1, gnew) = acc(primitive.inputs.clone(), Vec::new(), gr);
+
+    let (ng1, gnew) = acc(primitive.inputs.clone(), vec![], gr);
     let mut inputs2 = Vec::new();
     for nd in ng1 {
         inputs2.push(Box::new(as_from_port(&nd)));
@@ -959,7 +960,7 @@ fn empty_graph() -> Graph {
 
 fn synth(ugen: &Ugen) -> Graph {
     let root = prepare_root(ugen);
-    print_ugen(0, &root); //DEBUG
+    //print_ugen(0, &root); //DEBUG
     let (_, gr) = mk_node(&root, &empty_graph());
     let cs = gr.constants.clone();
     let ks = gr.controls.clone();
