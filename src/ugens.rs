@@ -45,7 +45,7 @@ impl Add for Ugen {
 impl Mul for Ugen {
     type Output = Ugen;
     fn mul(self, rhs: Self) -> Self {
-        return mk_binary_operator(0, |x, y| x * y, self, rhs);
+        return mk_binary_operator(2, |x, y| x * y, self, rhs);
     }
 }
 
@@ -131,29 +131,19 @@ pub fn c(val: f64) -> Ugen {
 }
 
 pub fn add<T: Any, U: Any>(op1: T, op2: U) -> Ugen {
-    return mk_binary_operator(0, |x, y| x + y, op1, op2);
+    return mk_binary_operator_2(0, |x, y| x + y, op1, op2);
 }
 
-/*
-pub fn mul<T: 'static, U: 'static>(op1: T, op2: U) -> Ugen {
-    return mk_binary_operator(0, |x, y| {x * y}, op1, op2);
-}
-*/
 pub fn mul<T: Any, U: Any>(op1: T, op2: U) -> Ugen {
-    return mk_binary_operator(0, |x, y| x * y, op1, op2);
+    return mk_binary_operator_2(2, |x, y| x * y, op1, op2);
 }
 
 pub fn sub<T: Any, U: Any>(op1: T, op2: U) -> Ugen {
-    return mk_binary_operator(0, |x, y| x - y, op1, op2);
+    return mk_binary_operator_2(1, |x, y| x - y, op1, op2);
 }
 
-pub fn play_demo_1() {
-    //sc_play(&sin_osc(440.0, 0.0));
-    let ug0 = rhpf(one_pole(brown_noise(), 0.99), (lpf(brown_noise(), 14.0) * c(400.0)) + c(500.0), 0.03) * c(1000.3);
-    let ug1 = rhpf(one_pole(brown_noise(), 0.99), (lpf(brown_noise(), 20.0) * c(800.0)) + c(1000.0), 0.03) * c(1000.3);
-    let ug2 = (ug0 + ug1) * c(4.0);
-    sc_play(&ug2);
-}
+
+pub fn bubbles() -> Ugen{
 /*
 {
 ({RHPF.ar(OnePole.ar(BrownNoise.ar, 0.99), LPF.ar(BrownNoise.ar, 14)
@@ -163,54 +153,21 @@ pub fn play_demo_1() {
 * 4
 }.play
 */
+    let ug0 = rhpf(one_pole(brown_noise(), 0.99), c(500.0)  + (c(400.0) * lpf(brown_noise(), 14.0)), 0.03);
+    let ug1 = rhpf(one_pole(brown_noise(), 0.99), c(1000.0) + (c(800.0) * lpf(brown_noise(), 20.0)), 0.03);
+    let ug2 = c(4.0) * (c(1.003) * ug0 + c(1.005) * ug1);
+    ug2
+}
+pub fn play_demo_1() {
+    //sc_play(&sin_osc(440.0, 0.0));
+    sc_play(&bubbles());
+}
 
 pub fn play_demo_2() {
-    let ug0 = mul(
-        rhpf(
-            one_pole(brown_noise(), 0.99),
-            add(mul(lpf(brown_noise(), 14.0), 400.0), 500.0),
-            0.03,
-        ),
-        1.003,
-    );
-    let ug1 = mul(
-        rhpf(
-            one_pole(brown_noise(), 0.99),
-            add(mul(lpf(brown_noise(), 20.0), 800.0), 1000.0),
-            0.03,
-        ),
-        1.005,
-    );
-
-    let ug2 = mul(4.0, add(ug0, ug1));
-    sc_play_vec(vec![ug2.clone(), ug2]);
+    sc_play_vec(vec![bubbles(), bubbles()]);
     //sc_play_vec(vec![mul(sin_osc(440.0, 0.0), 0.1), mul(sin_osc(100.0, 0.0), 0.1)]);
 }
 
-/*
-"/d_recv" 0 ",b" 0 0 0 0 2 1d "SCgf" 0 0 0 0 0 1 9 "anonymous" 0 c "A" a0 0 0 "DH" 0 0 "Dz" 0 0 "?" 80 a3 d7 "<" f5 c2 8f "A`" 0 0 "C" 
-c8 0 0 "C" fa 0 0 "?}p" a4 "?" 80 "bN@" 80 0 0 0 0 0 0 0 0 0 0 0 13 
-a "BrownNoise" 2 0 0 0 1 0 0 2 
-7 "OnePole" 2 0 2 0 1 0 0 0 0 0 0 ff ff 0 8 2 
-a "BrownNoise" 2 0 0 0 1 0 0 2 
-3 "LPF" 2 0 2 0 1 0 0 0 2 0 0 ff ff 0 5 2 
-c "BinaryOpUGen" 2 0 2 0 1 0 2 ff ff 0 6 0 3 0 0 2 
-c "BinaryOpUGen" 2 0 2 0 1 0 0 ff ff 0 7 0 4 0 0 2 
-4 "RHPF" 2 0 3 0 1 0 0 0 1 0 0 0 5 0 0 ff ff 0 4 2 
-c "BinaryOpUGen" 2 0 2 0 1 0 2 ff ff 0 9 0 6 0 0 2 
-a "BrownNoise" 2 0 0 0 1 0 0 2 
-7 "OnePole" 2 0 2 0 1 0 0 0 8 0 0 ff ff 0 8 2 
-a "BrownNoise" 2 0 0 0 1 0 0 2 
-3 "LPF" 2 0 2 0 1 0 0 0 a 0 0 ff ff 0 0 2 
-c "BinaryOpUGen" 2 0 2 0 1 0 2 ff ff 0 1 0 b 0 0 2 
-c "BinaryOpUGen" 2 0 2 0 1 0 0 ff ff 0 2 0 c 0 0 2 
-4 "RHPF" 2 0 3 0 1 0 0 0 9 0 0 0 d 0 0 ff ff 0 4 2 
-c "BinaryOpUGen" 2 0 2 0 1 0 2 ff ff 0 3 0 e 0 0 2 
-c "BinaryOpUGen" 2 0 2 0 1 0 0 0 7 0 0 0 f 0 0 2 
-c "BinaryOpUGen" 2 0 2 0 1 0 2 ff ff 0 a 0 10 0 0 2 
-3 "Out" 2 0 2 0 0 0 0 ff ff 0 b 0 11 0 0 0 0 0
-
-*/
 
 macro_rules! osc_m {
     ($name:expr, $first:expr, $second:expr) => {

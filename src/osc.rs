@@ -1,4 +1,5 @@
-use sc3::{print_bytes, synthdef, Ugen, Mce, Mrg};
+use sc3::{synthdef, Ugen, Mce, Mrg};
+use utils::{print_bytes};
 use std::mem;
 use std::net;
 use std::time::Duration;

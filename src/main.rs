@@ -3,6 +3,7 @@ mod osc;
 mod ugens;
 mod sc3;
 mod gui;
+mod utils;
 //#![allow(dead_code)]
 
 extern crate iui;
@@ -29,12 +30,11 @@ fn main() {
     let ug2 = synthdef("anonymous", &sin_osc_m!(440.0, 0.0, rate: Rate::RateIr));
     print_bytes("final macro", &ug2);
 */
-    //sc_start();
-
-    
-    
+    //sc_start();  
 
 }
+
+
 
 #[test]
 fn test0() {

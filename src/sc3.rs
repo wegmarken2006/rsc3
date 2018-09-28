@@ -416,7 +416,7 @@ fn rate_of(ugen: &Ugen) -> Rate {
         Ugen::Mrg(mrg) => rate_of(&*mrg.left),
         Ugen::Primitive(primitive) => primitive.rate,
         Ugen::Proxy(proxy) => proxy.primitive.rate,
-        _ => Rate::RateKr,
+        _ => Rate::RateIr,
     }
 }
 
@@ -1169,7 +1169,11 @@ pub fn mk_unary_operator<T: Any>(sp: i32, fun: fn(f64) -> f64, op: T) -> Ugen {
     }
 }
 
-pub fn mk_binary_operator<T: Any, U: Any>(sp: i32, fun: fn(f64, f64) -> f64, op1: T, op2: U) -> Ugen {
+pub fn mk_binary_operator(sp: i32, fun: fn(f64, f64) -> f64, op1: Ugen, op2: Ugen) -> Ugen {
+    return mk_operator("BinaryOpUGen", vec![Box::new(op1), Box::new(op2)], sp);
+}
+
+pub fn mk_binary_operator_2<T: Any, U: Any>(sp: i32, fun: fn(f64, f64) -> f64, op1: T, op2: U) -> Ugen {
     let op1_b = &op1;
     let op1_any = op1_b as &Any;
     let op2_b = &op2;
@@ -1283,23 +1287,6 @@ fn get_node_u(node: &Node) -> NodeU {
         Node::NodeU(nodeu) => nodeu.clone(),
         _ => panic!("get_node_u"),
     }
-}
-pub fn print_bytes(name: &str, lst: &Vec<u8>) {
-    println!("{}", name);
-    let mut ascii: String = "".to_string();
-    for elem in lst {
-        if *elem >= 32 && *elem <= 126 {
-            ascii.push(*elem as char);
-            //print!(" {:?}", *elem as char);
-        } else {
-            if ascii.len() > 0 {
-                print!(" {:?}", &ascii);
-                ascii = "".to_string();
-            }
-            print!(" {:x}", *elem);
-        }
-    }
-    println!("");
 }
 
 #[test]
